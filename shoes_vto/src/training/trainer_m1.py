@@ -133,7 +133,7 @@ class ARShoeM1Trainer:
         self.scheduler = optim.lr_scheduler.CosineAnnealingLR(
             self.optimizer,
             T_max=config.get('num_epochs', 200),
-            eta_min=1e-5
+            eta_min=config.get('eta_min', 1e-5)
         )
         
         # Training state

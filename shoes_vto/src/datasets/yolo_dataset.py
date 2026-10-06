@@ -52,6 +52,15 @@ KEYPOINT_FLIP_MAP = {
 }
 
 
+def _safe_path(p):
+    p_str = str(p)
+    if os.name == 'nt' and not p_str.startswith('\\\\?\\'):
+        abs_p = os.path.abspath(p_str)
+        if len(abs_p) > 240:
+            return Path('\\\\?\\' + abs_p)
+    return p
+
+
 class YOLOFootDataset(Dataset):
     """
     YOLO format foot dataset with 16 keypoints
@@ -123,7 +132,8 @@ class YOLOFootDataset(Dataset):
                 for inst in instances_raw
             ]
         else:
-            image_raw = Image.open(img_path).convert("RGB")
+            safe_img = _safe_path(img_path)
+            image_raw = Image.open(safe_img).convert("RGB")
             orig_width, orig_height = image_raw.size
             label_path = self.labels_dir / (img_path.stem + ".txt")
             instances_raw = self._parse_label_file(label_path)
@@ -303,11 +313,11 @@ class YOLOFootDataset(Dataset):
             - 'keypoints': [[x, y, v], ...] 16 keypoints (normalized 0-1)
         """
         instances = []
-        
-        if not label_path.exists():
+        safe_lp = _safe_path(label_path)
+        if not os.path.exists(safe_lp):
             return instances
         
-        with open(label_path, 'r') as f:
+        with open(safe_lp, 'r', encoding='utf-8') as f:
             lines = f.readlines()
         
         for line in lines:
