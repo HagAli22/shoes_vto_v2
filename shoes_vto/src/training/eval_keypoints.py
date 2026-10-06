@@ -94,8 +94,9 @@ def compute_pck(pred_keypoints, gt_keypoints, gt_visibility, bbox_diags, thresho
     else:
         overall_pck = 0.0
         
+    num_kps = pred_keypoints.shape[1]
     per_kp_pck = []
-    for kp_idx in range(16):
+    for kp_idx in range(num_kps):
         kp_v = valid[:, kp_idx]
         if kp_v.sum() > 0:
             pck_k = (correct[:, kp_idx].sum().float() / kp_v.sum().float()).item()
@@ -145,6 +146,42 @@ SKELETON_LIMBS = [
     (5, 13),   # ball_top -> throat
 ]
 
+# 14 keypoint names (ankle_center and shin_mid removed)
+KEYPOINT_NAMES_14 = [
+    "toe_ground",        # 0
+    "heel_back",         # 1
+    "heel_ground",       # 2
+    "ball_medial",       # 3
+    "ball_lateral",      # 4
+    "ball_top",          # 5
+    "instep_top",        # 6
+    "arch_medial",       # 7
+    "midfoot_lateral",   # 8
+    "malleolus_medial",  # 9
+    "malleolus_lateral", # 10
+    "toe_tip",           # 11
+    "throat",            # 12
+    "achilles",          # 13
+]
+
+# 14 limb connections (closed collar ring)
+SKELETON_LIMBS_14 = [
+    (11, 0),   # toe_tip -> toe_ground
+    (0, 2),    # toe_ground -> heel_ground
+    (2, 1),    # heel_ground -> heel_back
+    (3, 5),    # ball_medial -> ball_top
+    (5, 4),    # ball_top -> ball_lateral
+    (2, 7),    # heel_ground -> arch_medial
+    (2, 8),    # heel_ground -> midfoot_lateral
+    (7, 6),    # arch_medial -> instep_top
+    (8, 6),    # midfoot_lateral -> instep_top
+    (5, 12),   # ball_top -> throat
+    (9, 12),   # malleolus_medial -> throat
+    (10, 12),  # malleolus_lateral -> throat
+    (9, 13),   # malleolus_medial -> achilles
+    (10, 13),  # malleolus_lateral -> achilles
+]
+
 
 def compute_multi_threshold_pck(pred_keypoints, gt_keypoints, gt_visibility, bbox_diags, thresholds=(0.2, 0.1, 0.05)):
     """
@@ -169,9 +206,12 @@ def compute_multi_threshold_pck(pred_keypoints, gt_keypoints, gt_visibility, bbo
     if not isinstance(bbox_diags, torch.Tensor):
         bbox_diags = torch.tensor(np.asarray(bbox_diags), dtype=torch.float32)
         
-    dist = torch.norm(pred_keypoints - gt_keypoints, dim=-1)  # [N, 16]
-    norm_dist = dist / (bbox_diags.unsqueeze(1) + 1e-6)       # [N, 16]
-    valid = gt_visibility > 0                                 # [N, 16]
+    num_kps = pred_keypoints.shape[1]
+    kp_names_list = KEYPOINT_NAMES_14 if num_kps == 14 else KEYPOINT_NAMES
+
+    dist = torch.norm(pred_keypoints - gt_keypoints, dim=-1)  # [N, K]
+    norm_dist = dist / (bbox_diags.unsqueeze(1) + 1e-6)       # [N, K]
+    valid = gt_visibility > 0                                 # [N, K]
     
     total_valid = int(valid.sum().item())
     
@@ -181,8 +221,8 @@ def compute_multi_threshold_pck(pred_keypoints, gt_keypoints, gt_visibility, bbo
         overall_results[t] = (correct_t.sum().float() / (total_valid + 1e-6)).item()
         
     per_kp_results = {}
-    for kp_idx in range(16):
-        kp_name = KEYPOINT_NAMES[kp_idx]
+    for kp_idx in range(num_kps):
+        kp_name = kp_names_list[kp_idx] if kp_idx < len(kp_names_list) else f"kp_{kp_idx}"
         v_k = valid[:, kp_idx]
         count_k = int(v_k.sum().item())
         kp_dict = {'name': kp_name, 'valid_count': count_k}
@@ -226,6 +266,9 @@ def draw_keypoints_on_image(image_rgb, gt_kps=None, gt_vis=None, pred_kps=None, 
         
     H, W = img.shape[:2]
     
+    num_kps = len(pred_kps) if pred_kps is not None else (len(gt_kps) if gt_kps is not None else 16)
+    limbs = SKELETON_LIMBS_14 if num_kps == 14 else SKELETON_LIMBS
+    
     # Draw Bounding Box if present (thin yellow)
     if bbox is not None:
         cx, cy, bw, bh = bbox
@@ -237,31 +280,32 @@ def draw_keypoints_on_image(image_rgb, gt_kps=None, gt_vis=None, pred_kps=None, 
         
     # Draw GT Skeleton Limbs (Thin Green)
     if gt_kps is not None and gt_vis is not None:
-        for p1, p2 in SKELETON_LIMBS:
-            if gt_vis[p1] > 0 and gt_vis[p2] > 0:
+        for p1, p2 in limbs:
+            if p1 < len(gt_vis) and p2 < len(gt_vis) and gt_vis[p1] > 0 and gt_vis[p2] > 0:
                 pt1 = (int(round(gt_kps[p1][0])), int(round(gt_kps[p1][1])))
                 pt2 = (int(round(gt_kps[p2][0])), int(round(gt_kps[p2][1])))
                 cv2.line(img, pt1, pt2, (0, 180, 0), 1, cv2.LINE_AA)
                 
     # Draw Predicted Skeleton Limbs (Thin Coral/Magenta)
     if pred_kps is not None:
-        for p1, p2 in SKELETON_LIMBS:
-            pt1 = (int(round(pred_kps[p1][0])), int(round(pred_kps[p1][1])))
-            pt2 = (int(round(pred_kps[p2][0])), int(round(pred_kps[p2][1])))
-            cv2.line(img, pt1, pt2, (255, 80, 80), 1, cv2.LINE_AA)
+        for p1, p2 in limbs:
+            if p1 < len(pred_kps) and p2 < len(pred_kps):
+                pt1 = (int(round(pred_kps[p1][0])), int(round(pred_kps[p1][1])))
+                pt2 = (int(round(pred_kps[p2][0])), int(round(pred_kps[p2][1])))
+                cv2.line(img, pt1, pt2, (255, 80, 80), 1, cv2.LINE_AA)
             
     # Draw Displacement Error Vectors (Yellow line from GT to Pred)
     if gt_kps is not None and gt_vis is not None and pred_kps is not None:
-        for idx in range(16):
-            if gt_vis[idx] > 0:
+        for idx in range(num_kps):
+            if idx < len(gt_vis) and gt_vis[idx] > 0 and idx < len(pred_kps):
                 gt_pt = (int(round(gt_kps[idx][0])), int(round(gt_kps[idx][1])))
                 pr_pt = (int(round(pred_kps[idx][0])), int(round(pred_kps[idx][1])))
                 cv2.line(img, gt_pt, pr_pt, (255, 255, 0), 1, cv2.LINE_AA)
                 
     # Draw GT Keypoints (Bright Green circles with dark outline)
     if gt_kps is not None and gt_vis is not None:
-        for idx in range(16):
-            if gt_vis[idx] > 0:
+        for idx in range(num_kps):
+            if idx < len(gt_vis) and gt_vis[idx] > 0:
                 pt = (int(round(gt_kps[idx][0])), int(round(gt_kps[idx][1])))
                 cv2.circle(img, pt, 4, (0, 0, 0), -1, cv2.LINE_AA)
                 cv2.circle(img, pt, 3, (0, 255, 0), -1, cv2.LINE_AA)
@@ -270,7 +314,7 @@ def draw_keypoints_on_image(image_rgb, gt_kps=None, gt_vis=None, pred_kps=None, 
                 
     # Draw Predicted Keypoints (Bright Red circles with white outline)
     if pred_kps is not None:
-        for idx in range(16):
+        for idx in range(num_kps):
             pt = (int(round(pred_kps[idx][0])), int(round(pred_kps[idx][1])))
             cv2.circle(img, pt, 4, (255, 255, 255), -1, cv2.LINE_AA)
             cv2.circle(img, pt, 3, (255, 20, 20), -1, cv2.LINE_AA)
@@ -302,18 +346,20 @@ def create_side_by_side_visualization(image_rgb, gt_kps, gt_vis, pred_kps, pred_
         base = base.astype(np.uint8)
         
     H, W = base.shape[:2]
+    num_kps = len(pred_kps) if pred_kps is not None else (len(gt_kps) if gt_kps is not None else 16)
+    limbs = SKELETON_LIMBS_14 if num_kps == 14 else SKELETON_LIMBS
     
     # 1. Left Panel: Ground Truth only
     panel_gt = base.copy()
     cv2.rectangle(panel_gt, (0, 0), (W, 22), (20, 20, 20), -1)
     cv2.putText(panel_gt, f"Ground Truth: {img_name}", (10, 15), cv2.FONT_HERSHEY_SIMPLEX, 0.40, (0, 255, 0), 1, cv2.LINE_AA)
     if gt_kps is not None and gt_vis is not None:
-        for p1, p2 in SKELETON_LIMBS:
-            if gt_vis[p1] > 0 and gt_vis[p2] > 0:
+        for p1, p2 in limbs:
+            if p1 < len(gt_vis) and p2 < len(gt_vis) and gt_vis[p1] > 0 and gt_vis[p2] > 0:
                 cv2.line(panel_gt, (int(round(gt_kps[p1][0])), int(round(gt_kps[p1][1]))),
                                   (int(round(gt_kps[p2][0])), int(round(gt_kps[p2][1]))), (0, 180, 0), 1, cv2.LINE_AA)
-        for idx in range(16):
-            if gt_vis[idx] > 0:
+        for idx in range(num_kps):
+            if idx < len(gt_vis) and gt_vis[idx] > 0:
                 pt = (int(round(gt_kps[idx][0])), int(round(gt_kps[idx][1])))
                 cv2.circle(panel_gt, pt, 4, (0, 0, 0), -1, cv2.LINE_AA)
                 cv2.circle(panel_gt, pt, 3, (0, 255, 0), -1, cv2.LINE_AA)
@@ -322,16 +368,18 @@ def create_side_by_side_visualization(image_rgb, gt_kps, gt_vis, pred_kps, pred_
     # 2. Center Panel: Predictions only
     panel_pred = base.copy()
     cv2.rectangle(panel_pred, (0, 0), (W, 22), (20, 20, 20), -1)
-    cv2.putText(panel_pred, "M1 Model Prediction", (10, 15), cv2.FONT_HERSHEY_SIMPLEX, 0.40, (255, 80, 80), 1, cv2.LINE_AA)
+    cv2.putText(panel_pred, "Model Prediction", (10, 15), cv2.FONT_HERSHEY_SIMPLEX, 0.40, (255, 80, 80), 1, cv2.LINE_AA)
     if pred_kps is not None:
-        for p1, p2 in SKELETON_LIMBS:
-            cv2.line(panel_pred, (int(round(pred_kps[p1][0])), int(round(pred_kps[p1][1]))),
-                                 (int(round(pred_kps[p2][0])), int(round(pred_kps[p2][1]))), (255, 80, 80), 1, cv2.LINE_AA)
-        for idx in range(16):
-            pt = (int(round(pred_kps[idx][0])), int(round(pred_kps[idx][1])))
-            cv2.circle(panel_pred, pt, 4, (255, 255, 255), -1, cv2.LINE_AA)
-            cv2.circle(panel_pred, pt, 3, (255, 20, 20), -1, cv2.LINE_AA)
-            cv2.putText(panel_pred, str(idx), (pt[0] + 4, pt[1] - 3), cv2.FONT_HERSHEY_SIMPLEX, 0.35, (255, 60, 60), 1, cv2.LINE_AA)
+        for p1, p2 in limbs:
+            if p1 < len(pred_kps) and p2 < len(pred_kps):
+                cv2.line(panel_pred, (int(round(pred_kps[p1][0])), int(round(pred_kps[p1][1]))),
+                                     (int(round(pred_kps[p2][0])), int(round(pred_kps[p2][1]))), (255, 80, 80), 1, cv2.LINE_AA)
+        for idx in range(num_kps):
+            if idx < len(pred_kps):
+                pt = (int(round(pred_kps[idx][0])), int(round(pred_kps[idx][1])))
+                cv2.circle(panel_pred, pt, 4, (255, 255, 255), -1, cv2.LINE_AA)
+                cv2.circle(panel_pred, pt, 3, (255, 20, 20), -1, cv2.LINE_AA)
+                cv2.putText(panel_pred, str(idx), (pt[0] + 4, pt[1] - 3), cv2.FONT_HERSHEY_SIMPLEX, 0.35, (255, 60, 60), 1, cv2.LINE_AA)
             
     # 3. Right Panel: Overlay with error lines
     panel_overlay = draw_keypoints_on_image(base, gt_kps, gt_vis, pred_kps, pred_confs, bbox)

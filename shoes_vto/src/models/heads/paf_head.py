@@ -62,13 +62,14 @@ class PAFHead(nn.Module):
         return pafs
 
 
-def load_paf_config():
+def load_paf_config(config_name="paf_connections.yaml"):
     """Load PAF limb connections from config"""
     # Try multiple paths to find the config
     possible_paths = [
-        Path(__file__).parent.parent.parent / "configs" / "paf_connections.yaml",  # From src/models/heads/
-        Path("shoes_vto/configs/paf_connections.yaml"),  # From project root
-        Path("configs/paf_connections.yaml"),  # From shoes_vto/
+        Path(__file__).parent.parent.parent / "configs" / config_name,  # From src/models/heads/
+        Path(f"shoes_vto/configs/{config_name}"),  # From project root
+        Path(f"configs/{config_name}"),  # From shoes_vto/
+        Path(config_name),
     ]
     
     for config_path in possible_paths:
@@ -77,7 +78,7 @@ def load_paf_config():
                 config = yaml.safe_load(f)
             return config
     
-    raise FileNotFoundError(f"Could not find paf_connections.yaml in any of: {possible_paths}")
+    raise FileNotFoundError(f"Could not find {config_name} in any of: {possible_paths}")
 
 
 def generate_paf_field(height, width, kp_from, kp_to, paf_width=8, device='cpu'):
@@ -143,7 +144,7 @@ def generate_paf_field(height, width, kp_from, kp_to, paf_width=8, device='cpu')
     return paf_x, paf_y
 
 
-def generate_pafs_batch(keypoints_batch, heatmap_size=64, paf_width=8, device='cpu'):
+def generate_pafs_batch(keypoints_batch, heatmap_size=64, paf_width=8, device='cpu', config_name=None, limb_pairs=None):
     """
     Generate ground truth PAF fields for a batch - OPTIMIZED FOR GPU
     
@@ -152,14 +153,27 @@ def generate_pafs_batch(keypoints_batch, heatmap_size=64, paf_width=8, device='c
         heatmap_size: Size of PAF field (64 for stride=4)
         paf_width: Width of PAF region along limb
         device: 'cpu' or 'cuda' for GPU acceleration
+        config_name: Optional PAF config filename ('paf_connections.yaml' or 'paf_connections_14kp.yaml')
+        limb_pairs: Optional explicit limb pairs list
     
     Returns:
-        pafs: [B, 30, H, W] ground truth PAF fields
-        masks: [B, 15, H, W] binary masks (1 where limb is valid, 0 otherwise)
+        pafs: [B, num_limbs * 2, H, W] ground truth PAF fields
+        masks: [B, num_limbs, H, W] binary masks (1 where limb is valid, 0 otherwise)
     """
-    # Load PAF limb pairs
-    config = load_paf_config()
-    limb_pairs = config['limb_pairs']  # [[from_idx, to_idx, name], ...]
+    if limb_pairs is None:
+        if config_name is None:
+            # Auto-detect from keypoint length of first instance
+            num_kps = 16
+            for instances in keypoints_batch:
+                for inst in instances:
+                    if 'keypoints' in inst and len(inst['keypoints']) > 0:
+                        num_kps = len(inst['keypoints'])
+                        break
+                if num_kps != 16:
+                    break
+            config_name = "paf_connections_14kp.yaml" if num_kps == 14 else "paf_connections.yaml"
+        config = load_paf_config(config_name)
+        limb_pairs = config['limb_pairs']  # [[from_idx, to_idx, name], ...]
     
     batch_size = len(keypoints_batch)
     num_limbs = len(limb_pairs)

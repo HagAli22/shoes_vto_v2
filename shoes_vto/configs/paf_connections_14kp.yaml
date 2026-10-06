@@ -1,0 +1,32 @@
+# PAF (Part Affinity Field) Limb Connections for 14 Keypoints
+# Format: [from_keypoint_idx, to_keypoint_idx, limb_name]
+# Total limbs: 14 (produces 28 vector channels: x, y for each limb)
+
+limb_pairs:
+  # Sole Chain (3 limbs)
+  - [11, 0, "toe_tip_to_toe_ground"]
+  - [0, 2, "toe_ground_to_heel_ground"]
+  - [2, 1, "heel_ground_to_heel_back"]
+
+  # Ball Ring (2 limbs)
+  - [3, 5, "ball_medial_to_ball_top"]
+  - [5, 4, "ball_top_to_ball_lateral"]
+
+  # Mid-Sole (4 limbs)
+  - [2, 7, "heel_ground_to_arch_medial"]
+  - [2, 8, "heel_ground_to_midfoot_lateral"]
+  - [7, 6, "arch_medial_to_instep_top"]
+  - [8, 6, "midfoot_lateral_to_instep_top"]
+
+  # Dorsal Bridge (1 limb)
+  - [5, 12, "ball_top_to_throat"]
+
+  # Ankle Collar Ring (4 limbs)
+  - [9, 12, "malleolus_medial_to_throat"]
+  - [10, 12, "malleolus_lateral_to_throat"]
+  - [9, 13, "malleolus_medial_to_achilles"]
+  - [10, 13, "malleolus_lateral_to_achilles"]
+
+num_limbs: 14
+num_channels: 28
+

@@ -140,24 +140,34 @@ def generate_gaussian_heatmap(height, width, center_x, center_y, sigma=2.0, devi
     return heatmap
 
 
-def generate_heatmaps_batch(keypoints_batch, heatmap_size=64, sigma=3.5, device='cpu'):
+def generate_heatmaps_batch(keypoints_batch, heatmap_size=64, sigma=3.5, device='cpu', num_keypoints=None):
     """
     Generate ground truth heatmaps for a batch - OPTIMIZED FOR GPU
     
     Args:
         keypoints_batch: List of instances per image in batch
             Each element is a list of instances in that image
-            Each instance has 'keypoints': [[x, y, v], ...] for 16 keypoints
+            Each instance has 'keypoints': [[x, y, v], ...]
         heatmap_size: Size of heatmap (64 for stride=4)
         sigma: Gaussian sigma in pixels on heatmap (increased to 3.5 for better learning)
         device: 'cpu' or 'cuda' for GPU acceleration
+        num_keypoints: Optional number of keypoints (auto-detected if None)
     
     Returns:
-        heatmaps: [B, 16, H, W] ground truth heatmaps
-        masks: [B, 16, H, W] binary masks (1 where keypoint is labeled, 0 otherwise)
+        heatmaps: [B, K, H, W] ground truth heatmaps
+        masks: [B, K, H, W] binary masks (1 where keypoint is labeled, 0 otherwise)
     """
     batch_size = len(keypoints_batch)
-    num_keypoints = 16
+    if num_keypoints is None:
+        for instances in keypoints_batch:
+            for inst in instances:
+                if 'keypoints' in inst and len(inst['keypoints']) > 0:
+                    num_keypoints = len(inst['keypoints'])
+                    break
+            if num_keypoints is not None:
+                break
+        if num_keypoints is None:
+            num_keypoints = 14
     
     # Create tensors directly on target device
     heatmaps = torch.zeros(batch_size, num_keypoints, heatmap_size, heatmap_size, device=device)

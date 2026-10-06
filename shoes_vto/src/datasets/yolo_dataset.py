@@ -32,7 +32,8 @@ import random
 #  13: throat          (midline)           -> stays 13
 #  14: achilles        (midline)           -> stays 14
 #  15: shin_mid        (midline)           -> stays 15
-KEYPOINT_FLIP_MAP = {
+# Keypoint mirroring map for horizontal flip (16 keypoints)
+KEYPOINT_FLIP_MAP_16 = {
     0: 0,    # toe_ground
     1: 1,    # heel_back
     2: 2,    # heel_ground
@@ -50,6 +51,26 @@ KEYPOINT_FLIP_MAP = {
     14: 14,  # achilles
     15: 15,  # shin_mid
 }
+
+# Keypoint mirroring map for horizontal flip (14 keypoints: ankle_center & shin_mid removed)
+KEYPOINT_FLIP_MAP_14 = {
+    0: 0,    # toe_ground
+    1: 1,    # heel_back
+    2: 2,    # heel_ground
+    3: 4,    # ball_medial <-> ball_lateral
+    4: 3,    # ball_lateral <-> ball_medial
+    5: 5,    # ball_top
+    6: 6,    # instep_top
+    7: 8,    # arch_medial <-> midfoot_lateral
+    8: 7,    # midfoot_lateral <-> arch_medial
+    9: 10,   # malleolus_medial <-> malleolus_lateral
+    10: 9,   # malleolus_lateral <-> malleolus_medial
+    11: 11,  # toe_tip
+    12: 12,  # throat (old 13)
+    13: 13,  # achilles (old 14)
+}
+
+KEYPOINT_FLIP_MAP = KEYPOINT_FLIP_MAP_16
 
 
 class YOLOFootDataset(Dataset):
@@ -74,7 +95,8 @@ class YOLOFootDataset(Dataset):
                  return_original_image=False,
                  augment=False,
                  flip_prob=0.5,
-                 cache_in_memory=True):
+                 cache_in_memory=True,
+                 target_keypoints=None):
         """
         Args:
             images_dir: Path to images directory
@@ -85,6 +107,7 @@ class YOLOFootDataset(Dataset):
             augment: If True, apply data augmentation (horizontal flip)
             flip_prob: Probability of horizontal flip when augment=True
             cache_in_memory: If True, caches images and labels in RAM after first read
+            target_keypoints: Desired number of keypoints (14 or 16). If 14 and raw annotations have 16, filters on the fly.
         """
         self.images_dir = Path(images_dir)
         self.labels_dir = Path(labels_dir)
@@ -94,6 +117,7 @@ class YOLOFootDataset(Dataset):
         self.augment = augment
         self.flip_prob = flip_prob
         self.cache_in_memory = cache_in_memory
+        self.target_keypoints = target_keypoints
         self.cache = {}
         
         # Get all image files
@@ -214,11 +238,13 @@ class YOLOFootDataset(Dataset):
             
             # Flip and rearrange keypoints
             old_kps = inst['keypoints']
-            new_kps = [[0.0, 0.0, 0] for _ in range(16)]  # Initialize independent sublists
+            num_kps = len(old_kps)
+            flip_map = KEYPOINT_FLIP_MAP_14 if num_kps == 14 else KEYPOINT_FLIP_MAP_16
+            new_kps = [[0.0, 0.0, 0] for _ in range(num_kps)]  # Initialize independent sublists
             
             for old_idx, kp in enumerate(old_kps):
                 x, y, v = kp
-                new_idx = KEYPOINT_FLIP_MAP[old_idx]
+                new_idx = flip_map.get(old_idx, old_idx)
                 new_x = 1.0 - x if v > 0 else 0.0  # Only flip if visible
                 new_kps[new_idx] = [new_x, y, v]
             
@@ -319,10 +345,12 @@ class YOLOFootDataset(Dataset):
             class_id = int(parts[0])
             bbox = [float(parts[1]), float(parts[2]), float(parts[3]), float(parts[4])]
             
-            # Parse keypoints (16 keypoints × 3 = 48 values)
+            # Parse keypoints (dynamically detect number of keypoints in line)
             keypoints = []
             kp_start_idx = 5
-            for i in range(16):
+            raw_kp_count = (len(parts) - 5) // 3
+            num_to_parse = raw_kp_count if raw_kp_count > 0 else (self.target_keypoints or 16)
+            for i in range(num_to_parse):
                 idx = kp_start_idx + i * 3
                 if idx + 2 < len(parts):
                     x = float(parts[idx])
@@ -332,6 +360,11 @@ class YOLOFootDataset(Dataset):
                 else:
                     # Missing keypoint data, mark as not labeled
                     keypoints.append([0.0, 0.0, 0])
+            
+            # If target_keypoints == 14 and raw annotation had 16 KPs, filter on the fly
+            if self.target_keypoints == 14 and len(keypoints) == 16:
+                keep_indices_14 = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 13, 14]
+                keypoints = [keypoints[idx] for idx in keep_indices_14]
             
             instances.append({
                 'class_id': class_id,
