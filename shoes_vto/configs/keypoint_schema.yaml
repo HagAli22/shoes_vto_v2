@@ -1,0 +1,95 @@
+# 16 Keypoint Schema from dataset/keypoint-order-audit.md
+# CRITICAL: Index 11 = toe_tip (NOT Index 0)
+
+num_keypoints: 16
+
+keypoints:
+  - index: 0
+    name: toe_ground
+    tier: 1
+    description: "Inferior contact point under toe box / lateral toe base"
+    
+  - index: 1
+    name: heel_back
+    tier: 1
+    description: "Posterior-most prominence of calcaneus (Heel Back)"
+    
+  - index: 2
+    name: heel_ground
+    tier: 1
+    description: "Inferior ground contact point of calcaneus"
+    
+  - index: 3
+    name: ball_medial
+    tier: 1
+    description: "1st metatarsal head prominence (Medial Ball)"
+    
+  - index: 4
+    name: ball_lateral
+    tier: 1
+    description: "5th metatarsal head prominence (Lateral Ball)"
+    
+  - index: 5
+    name: ball_top
+    tier: 1
+    description: "Superior dorsal point over metatarsal heads"
+    
+  - index: 6
+    name: instep_top
+    tier: 1
+    description: "Apex of the dorsal instep arch"
+    
+  - index: 7
+    name: arch_medial
+    tier: 2
+    description: "Medial longitudinal arch apex"
+    
+  - index: 8
+    name: midfoot_lateral
+    tier: 2
+    description: "Lateral midfoot outer boundary"
+    
+  - index: 9
+    name: malleolus_medial
+    tier: 1
+    description: "Center of medial malleolus (Inner Ankle Bone)"
+    
+  - index: 10
+    name: malleolus_lateral
+    tier: 1
+    description: "Center of lateral malleolus (Outer Ankle Bone)"
+    
+  - index: 11
+    name: toe_tip
+    tier: 1
+    description: "Anterior tip of distal phalanx of 1st (Big) Toe"
+    
+  - index: 12
+    name: ankle_center
+    tier: 1
+    description: "Geometric center of the talocrural joint"
+    
+  - index: 13
+    name: throat
+    tier: 1
+    description: "Anterior shoe opening throat / lower instep flex point"
+    
+  - index: 14
+    name: achilles
+    tier: 1
+    description: "Achilles tendon insertion onto posterior calcaneus"
+    
+  - index: 15
+    name: shin_mid
+    tier: 1
+    description: "Anterior lower tibia midpoint for leg alignment"
+
+# Zones for grouping
+zones:
+  sole_line: [0, 1, 2, 7, 8, 11]  # toe_ground, heel_back, heel_ground, arches, toe_tip
+  ball_ring: [3, 4, 5]  # ball_medial, ball_lateral, ball_top
+  ankle_ring: [9, 10, 12, 13, 14]  # malleoli, ankle_center, throat, achilles
+  leg_axis: [12, 15]  # ankle_center, shin_mid
+
+# Tier 2 keypoints (may have lower labeling priority)
+tier2_indices: [7, 8]  # arch_medial, midfoot_lateral

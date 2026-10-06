@@ -1,0 +1,42 @@
+# PAF (Part Affinity Field) Limb Connections
+# 15 limb pairs for 16 keypoints
+# Format: [from_keypoint_index, to_keypoint_index, connection_name]
+
+num_limbs: 15
+
+limb_pairs:
+  # Sole chain (4 connections)
+  - [11, 0, "toe_tip → toe_ground"]        # Connection 0
+  - [0, 2, "toe_ground → heel_ground"]     # Connection 1
+  - [2, 1, "heel_ground → heel_back"]      # Connection 2
+  
+  # Ball ring (2 connections)
+  - [3, 5, "ball_medial → ball_top"]       # Connection 3
+  - [5, 4, "ball_top → ball_lateral"]      # Connection 4
+  
+  # Mid-sole connections (4 connections)
+  - [2, 7, "heel_ground → arch_medial"]    # Connection 5
+  - [2, 8, "heel_ground → midfoot_lateral"]# Connection 6
+  - [7, 6, "arch_medial → instep_top"]     # Connection 7
+  - [8, 6, "midfoot_lateral → instep_top"] # Connection 8
+  
+  # Ankle ring (3 connections)
+  - [9, 12, "malleolus_medial → ankle_center"]    # Connection 9
+  - [12, 10, "ankle_center → malleolus_lateral"]  # Connection 10
+  - [12, 13, "ankle_center → throat"]             # Connection 11
+  - [12, 14, "ankle_center → achilles"]           # Connection 12
+  
+  # Leg axis (1 connection)
+  - [12, 15, "ankle_center → shin_mid"]    # Connection 13
+  
+  # Ball-ankle bridge (1 connection)
+  - [5, 13, "ball_top → throat"]           # Connection 14
+
+# PAF encoding
+# Each limb produces 2 channels: (delta_x, delta_y)
+# Total PAF channels = 15 limbs × 2 = 30 channels
+paf_channels: 30
+
+# PAF generation parameters
+paf_width: 8  # Width of PAF region along limb (in pixels on 64×64 map)
+paf_threshold: 0.05  # Minimum PAF magnitude to consider
