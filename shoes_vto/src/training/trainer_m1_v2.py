@@ -18,8 +18,17 @@ import json
 import csv
 from tqdm import tqdm
 
-# Add src to path
-sys.path.insert(0, str(Path(__file__).parent.parent))
+# Add src and shoes_vto to path
+_src_dir = Path(__file__).resolve().parent.parent
+_project_dir = _src_dir.parent
+if str(_src_dir) not in sys.path:
+    sys.path.insert(0, str(_src_dir))
+if str(_project_dir) not in sys.path:
+    sys.path.insert(0, str(_project_dir))
+
+# Evict third-party 'datasets' package from sys.modules if it shadowed local datasets
+if 'datasets' in sys.modules and 'site-packages' in getattr(sys.modules['datasets'], '__file__', ''):
+    del sys.modules['datasets']
 
 from models.arshoe_m1_v2 import ARShoeM1V2
 from models.heads.heatmap_head import generate_heatmaps_batch
@@ -28,7 +37,12 @@ from models.heads.class_head import generate_class_maps_batch
 from losses.heatmap_loss import HeatmapLoss, AdaptiveWingLoss
 from losses.paf_loss import PAFLoss
 from losses.class_loss import ClassLoss, compute_class_accuracy
-from datasets.yolo_dataset import YOLOFootDataset, collate_fn
+
+try:
+    from datasets.yolo_dataset import YOLOFootDataset, collate_fn
+except (ImportError, ModuleNotFoundError):
+    from src.datasets.yolo_dataset import YOLOFootDataset, collate_fn
+
 from training.eval_keypoints import decode_heatmaps_to_keypoints, compute_pck, compute_multi_threshold_pck
 
 

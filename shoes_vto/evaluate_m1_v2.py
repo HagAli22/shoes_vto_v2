@@ -27,12 +27,24 @@ if hasattr(sys.stdout, 'reconfigure'):
 if hasattr(sys.stderr, 'reconfigure'):
     sys.stderr.reconfigure(encoding='utf-8', errors='replace')
 
-# Add src to path
-SRC_DIR = Path(__file__).parent / "src"
-sys.path.insert(0, str(SRC_DIR))
+# Add src and current directory to path
+_this_dir = Path(__file__).resolve().parent
+_src_dir = _this_dir / "src"
+if str(_src_dir) not in sys.path:
+    sys.path.insert(0, str(_src_dir))
+if str(_this_dir) not in sys.path:
+    sys.path.insert(0, str(_this_dir))
+
+# Evict third-party 'datasets' package from sys.modules if it shadowed local datasets
+if 'datasets' in sys.modules and 'site-packages' in getattr(sys.modules['datasets'], '__file__', ''):
+    del sys.modules['datasets']
 
 from models.arshoe_m1_v2 import ARShoeM1V2
-from datasets.yolo_dataset import YOLOFootDataset
+
+try:
+    from datasets.yolo_dataset import YOLOFootDataset
+except (ImportError, ModuleNotFoundError):
+    from src.datasets.yolo_dataset import YOLOFootDataset
 from training.eval_keypoints import (
     decode_heatmaps_to_keypoints,
     compute_multi_threshold_pck,
