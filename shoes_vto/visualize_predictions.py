@@ -11,8 +11,13 @@ from pathlib import Path
 import sys
 import matplotlib.pyplot as plt
 
-# Add src to path
-sys.path.insert(0, str(Path(__file__).parent / "src"))
+# Add src and base directory to path with robust absolute resolution
+CURRENT_DIR = Path(__file__).resolve().parent
+SRC_DIR = CURRENT_DIR / "src"
+if str(SRC_DIR) not in sys.path:
+    sys.path.insert(0, str(SRC_DIR))
+if str(CURRENT_DIR) not in sys.path:
+    sys.path.insert(0, str(CURRENT_DIR))
 
 from models.arshoe_m1 import ARShoeM1
 from datasets.yolo_dataset import YOLOFootDataset

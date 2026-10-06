@@ -15,8 +15,13 @@ if hasattr(sys.stdout, 'reconfigure'):
 if hasattr(sys.stderr, 'reconfigure'):
     sys.stderr.reconfigure(encoding='utf-8', errors='replace')
 
-# Add src to path
-sys.path.insert(0, str(Path(__file__).parent / "src"))
+# Add src and base directory to path with robust absolute resolution
+CURRENT_DIR = Path(__file__).resolve().parent
+SRC_DIR = CURRENT_DIR / "src"
+if str(SRC_DIR) not in sys.path:
+    sys.path.insert(0, str(SRC_DIR))
+if str(CURRENT_DIR) not in sys.path:
+    sys.path.insert(0, str(CURRENT_DIR))
 
 from models.arshoe_m1 import ARShoeM1
 from training.trainer_m1 import ARShoeM1Trainer

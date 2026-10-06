@@ -23,9 +23,13 @@ if hasattr(sys.stdout, 'reconfigure'):
 if hasattr(sys.stderr, 'reconfigure'):
     sys.stderr.reconfigure(encoding='utf-8', errors='replace')
 
-# Add src to path
-SRC_DIR = Path(__file__).parent / "src"
-sys.path.insert(0, str(SRC_DIR))
+# Add src and base directory to path with robust absolute resolution
+CURRENT_DIR = Path(__file__).resolve().parent
+SRC_DIR = CURRENT_DIR / "src"
+if str(SRC_DIR) not in sys.path:
+    sys.path.insert(0, str(SRC_DIR))
+if str(CURRENT_DIR) not in sys.path:
+    sys.path.insert(0, str(CURRENT_DIR))
 
 from models.arshoe_m1 import ARShoeM1
 from training.trainer_m1 import ARShoeM1Trainer
@@ -142,15 +146,23 @@ def load_pretrained_weights(model, checkpoint_path, device='cpu'):
 
 def main():
     args = parse_args()
-    base_dir = Path(__file__).parent.resolve()
+    base_dir = Path(__file__).resolve().parent
 
     ckpt_path = Path(args.pretrained)
     if not ckpt_path.is_absolute():
-        ckpt_path = (base_dir / ckpt_path).resolve()
+        if ckpt_path.exists():
+            ckpt_path = ckpt_path.resolve()
+        elif (base_dir / ckpt_path).exists():
+            ckpt_path = (base_dir / ckpt_path).resolve()
 
     dataset_root = Path(args.dataset_root)
     if not dataset_root.is_absolute():
-        dataset_root = (base_dir / dataset_root).resolve()
+        if (dataset_root / "train" / "images").exists():
+            dataset_root = dataset_root.resolve()
+        elif (base_dir / dataset_root / "train" / "images").exists():
+            dataset_root = (base_dir / dataset_root).resolve()
+        elif Path("/content/dataset/shuffled_v4/train/images").exists():
+            dataset_root = Path("/content/dataset/shuffled_v4")
 
     output_dir = Path(args.output_dir)
     if not output_dir.is_absolute():
