@@ -12,44 +12,12 @@ from pathlib import Path
 import random
 
 
-# Keypoint mirroring map for horizontal flip
-# When flipping horizontally, left foot becomes right foot and bilateral keypoints swap.
-# Sagittal midline keypoints remain at the same index.
-# Schema reference: dataset/keypoint-order-audit.md & configs/keypoint_schema.yaml:
-#   0: toe_ground      (midline)           -> stays 0
-#   1: heel_back       (midline)           -> stays 1
-#   2: heel_ground     (midline)           -> stays 2
-#   3: ball_medial     (bilateral pair)    <-> 4 (ball_lateral)
-#   4: ball_lateral    (bilateral pair)    <-> 3 (ball_medial)
-#   5: ball_top        (midline)           -> stays 5
-#   6: instep_top      (midline)           -> stays 6
-#   7: arch_medial     (bilateral pair)    <-> 8 (midfoot_lateral)
-#   8: midfoot_lateral (bilateral pair)    <-> 7 (arch_medial)
-#   9: malleolus_med   (bilateral pair)    <-> 10 (malleolus_lat)
-#  10: malleolus_lat   (bilateral pair)    <-> 9 (malleolus_med)
-#  11: toe_tip         (midline)           -> stays 11
-#  12: ankle_center    (midline)           -> stays 12
-#  13: throat          (midline)           -> stays 13
-#  14: achilles        (midline)           -> stays 14
-#  15: shin_mid        (midline)           -> stays 15
-KEYPOINT_FLIP_MAP = {
-    0: 0,    # toe_ground
-    1: 1,    # heel_back
-    2: 2,    # heel_ground
-    3: 4,    # ball_medial <-> ball_lateral
-    4: 3,    # ball_lateral <-> ball_medial
-    5: 5,    # ball_top
-    6: 6,    # instep_top
-    7: 8,    # arch_medial <-> midfoot_lateral
-    8: 7,    # midfoot_lateral <-> arch_medial
-    9: 10,   # malleolus_medial <-> malleolus_lateral
-    10: 9,   # malleolus_lateral <-> malleolus_medial
-    11: 11,  # toe_tip
-    12: 12,  # ankle_center
-    13: 13,  # throat
-    14: 14,  # achilles
-    15: 15,  # shin_mid
-}
+# Schema reference: dataset/keypoint-order-audit.md & data.yaml
+# Class represents the person's left/right foot.
+# When horizontally flipped, left foot becomes right foot (class swaps: 0 <-> 1).
+# Anatomical keypoint definitions (e.g., ball_medial = big-toe side) stay on the same index.
+# Therefore, keypoint identities must NOT be swapped; KEYPOINT_FLIP_MAP is identity:
+KEYPOINT_FLIP_MAP = {i: i for i in range(16)}
 
 
 def _safe_path(p):

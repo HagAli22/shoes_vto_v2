@@ -326,8 +326,17 @@ class ARShoeM1Trainer:
                             x2 = int(min(64, (cx + w * 0.575) * 64))
                             y2 = int(min(64, (cy + h * 0.575) * 64))
                             
+                            # Ankle/Leg window (for ankle_center:12 and shin_mid:15)
+                            leg_x1 = int(max(0, (cx - w * 0.75) * 64))
+                            leg_x2 = int(min(64, (cx + w * 0.75) * 64))
+                            leg_y1 = int(max(0, (cy - h * 1.5) * 64))
+                            leg_y2 = int(min(64, (cy + h * 0.575) * 64))
+                            
                             hm_inst = torch.zeros_like(hm_img)
-                            hm_inst[:, y1:y2, x1:x2] = hm_img[:, y1:y2, x1:x2]
+                            foot_indices = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 13, 14]
+                            leg_indices = [12, 15]
+                            hm_inst[foot_indices, y1:y2, x1:x2] = hm_img[foot_indices, y1:y2, x1:x2]
+                            hm_inst[leg_indices, leg_y1:leg_y2, leg_x1:leg_x2] = hm_img[leg_indices, leg_y1:leg_y2, leg_x1:leg_x2]
                             
                             pred_inst, _ = decode_heatmaps_to_keypoints(hm_inst.unsqueeze(0), image_size=img_sz)
                             all_pred_kps.append(pred_inst[0].cpu().numpy())

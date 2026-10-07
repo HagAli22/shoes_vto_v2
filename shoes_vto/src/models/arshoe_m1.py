@@ -105,6 +105,7 @@ class ARShoeM1(nn.Module):
         return {
             'heatmaps': heatmaps,
             'pafs': pafs,
+            'class': class_probs,
             'class_logits': class_logits,
             'class_probs': class_probs
         }

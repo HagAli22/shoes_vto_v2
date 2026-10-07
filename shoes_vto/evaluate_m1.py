@@ -36,6 +36,7 @@ if str(CURRENT_DIR) not in sys.path:
     sys.path.insert(0, str(CURRENT_DIR))
 
 from models.arshoe_m1 import ARShoeM1
+from models.arshoe_m1v2 import ARShoeM1v2
 from datasets.yolo_dataset import YOLOFootDataset
 from training.eval_keypoints import (
     decode_heatmaps_to_keypoints,
@@ -48,14 +49,7 @@ from training.eval_keypoints import (
 
 
 def load_model(checkpoint_path, device='cpu'):
-    """Load ARShoeM1 model from checkpoint, handling torch.compile prefixes."""
-    model = ARShoeM1(
-        encoder_channels=128,
-        num_keypoints=16,
-        num_limbs=15,
-        num_classes=2
-    )
-    
+    """Load ARShoeM1 or ARShoeM1v2 model from checkpoint with auto-detection."""
     checkpoint_path = Path(checkpoint_path)
     if not checkpoint_path.exists():
         raise FileNotFoundError(f"Checkpoint not found at: {checkpoint_path}")
@@ -78,6 +72,15 @@ def load_model(checkpoint_path, device='cpu'):
     for k, v in state_dict.items():
         cleaned_key = k.replace('_orig_mod.', '')
         cleaned_state_dict[cleaned_key] = v
+        
+    # Auto-detect model architecture from state_dict keys
+    is_v2 = any('s4.' in k or 'cls_global.' in k or 'fpn_conv.' in k for k in cleaned_state_dict.keys())
+    if is_v2:
+        print("  Detected Architecture: ARShoeM1v2 (MobileNetV3 + FPN + Global Context)")
+        model = ARShoeM1v2(pretrained=False, num_keypoints=16, num_limbs=15, num_classes=2)
+    else:
+        print("  Detected Architecture: ARShoeM1 (Fast-SCNN)")
+        model = ARShoeM1(encoder_channels=128, num_keypoints=16, num_limbs=15, num_classes=2)
         
     missing, unexpected = model.load_state_dict(cleaned_state_dict, strict=True)
     if len(missing) > 0 or len(unexpected) > 0:
@@ -106,6 +109,9 @@ def run_evaluation(model, val_dataset, device, output_dir, num_vis=8):
     all_gt_vis = []
     all_diags = []
     
+    correct_class_count = 0
+    total_class_count = 0
+    
     vis_samples = []
     
     print(f"\nRunning inference on {len(val_dataset)} validation samples...")
@@ -119,8 +125,10 @@ def run_evaluation(model, val_dataset, device, output_dir, num_vis=8):
             # Forward pass
             outputs = model(img_tensor)
             
-            # Heatmaps for this image [16, 64, 64]
+            # Heatmaps [16, 64, 64] and Class [2, 64, 64]
             hm_img = outputs['heatmaps'][0]
+            cls_tensor = outputs.get('class', outputs.get('class_probs', None))
+            cls_img = cls_tensor[0] if cls_tensor is not None else None
             
             # Reconstruct original image for visualization (RGB, 0-255 uint8)
             img_disp = (sample['image'].permute(1, 2, 0).numpy() * 255.0).clip(0, 255).astype(np.uint8)
@@ -133,17 +141,28 @@ def run_evaluation(model, val_dataset, device, output_dir, num_vis=8):
                     cx, cy, w, h = inst['bbox']
                     diag = float(((w * 256.0)**2 + (h * 256.0)**2)**0.5)
                     cname = inst.get('class_name', f"foot_{inst.get('class_id', 0)}")
+                    gt_cls = inst.get('class_id', 0)
                     
-                    # Instance-scoped heatmap decoding:
-                    # When an image has multiple feet (left and right), we search for peaks
-                    # within the foot instance region (expanded slightly by 15% margin)
+                    # 1. Instance-scoped foot window (for foot keypoints 0..11, 13, 14)
                     x1 = int(max(0, (cx - w * 0.575) * 64))
                     y1 = int(max(0, (cy - h * 0.575) * 64))
                     x2 = int(min(64, (cx + w * 0.575) * 64))
                     y2 = int(min(64, (cy + h * 0.575) * 64))
                     
+                    # 2. Ankle/Leg window (for ankle_center:12 and shin_mid:15)
+                    # Leg extends upward from foot, so expand vertically upwards by up to 1.5x bbox height
+                    leg_x1 = int(max(0, (cx - w * 0.75) * 64))
+                    leg_x2 = int(min(64, (cx + w * 0.75) * 64))
+                    leg_y1 = int(max(0, (cy - h * 1.5) * 64))
+                    leg_y2 = int(min(64, (cy + h * 0.575) * 64))
+                    
                     hm_inst = torch.zeros_like(hm_img)
-                    hm_inst[:, y1:y2, x1:x2] = hm_img[:, y1:y2, x1:x2]
+                    # Foot keypoints
+                    foot_indices = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 13, 14]
+                    hm_inst[foot_indices, y1:y2, x1:x2] = hm_img[foot_indices, y1:y2, x1:x2]
+                    # Leg keypoints
+                    leg_indices = [12, 15]
+                    hm_inst[leg_indices, leg_y1:leg_y2, leg_x1:leg_x2] = hm_img[leg_indices, leg_y1:leg_y2, leg_x1:leg_x2]
                     
                     pred_inst_tensor, pred_conf_tensor = decode_heatmaps_to_keypoints(hm_inst.unsqueeze(0), image_size=256)
                     pred_kps_np = pred_inst_tensor[0].cpu().numpy()
@@ -153,6 +172,14 @@ def run_evaluation(model, val_dataset, device, output_dir, num_vis=8):
                     all_gt_kps.append(gt_kp)
                     all_gt_vis.append(gt_v)
                     all_diags.append(diag)
+                    
+                    # Class prediction evaluation inside instance bbox
+                    if cls_img is not None and y2 > y1 and x2 > x1:
+                        crop_cls = cls_img[:, y1:y2, x1:x2]
+                        pred_cls = crop_cls.mean(dim=(1, 2)).argmax().item()
+                        if pred_cls == gt_cls:
+                            correct_class_count += 1
+                        total_class_count += 1
                     
                     if len(vis_samples) < num_vis:
                         vis_samples.append({
@@ -175,10 +202,17 @@ def run_evaluation(model, val_dataset, device, output_dir, num_vis=8):
         thresholds=(0.20, 0.10, 0.05)
     )
     
+    # Add class accuracy to metrics
+    if total_class_count > 0:
+        metrics['class_accuracy'] = float(correct_class_count / total_class_count)
+        metrics['class_evaluated'] = total_class_count
+    else:
+        metrics['class_accuracy'] = 0.0
+        metrics['class_evaluated'] = 0
+    
     # Save visualizations
     print(f"\nGenerating and saving {len(vis_samples)} visualizations to {vis_dir}...")
     for idx, s in enumerate(vis_samples):
-        # 1. 3-panel visualization: [GT | Prediction | Overlay Error]
         side_by_side = create_side_by_side_visualization(
             image_rgb=s['img_disp'],
             gt_kps=s['gt_kps'],
@@ -188,7 +222,6 @@ def run_evaluation(model, val_dataset, device, output_dir, num_vis=8):
             bbox=s['bbox'],
             img_name=s['name']
         )
-        # Convert RGB to BGR for cv2.imwrite
         bgr_side = cv2.cvtColor(side_by_side, cv2.COLOR_RGB2BGR)
         out_file = vis_dir / f"eval_vis_{idx+1:02d}_{s['name']}.jpg"
         cv2.imwrite(str(out_file), bgr_side)
@@ -205,18 +238,22 @@ def run_evaluation(model, val_dataset, device, output_dir, num_vis=8):
 def print_evaluation_summary(metrics, num_images, vis_dir):
     """Print formatted concise summary matching user requirements."""
     overall = metrics['overall']
+    foot14 = metrics.get('foot_14', {})
+    leg2 = metrics.get('leg_2', {})
     per_kp = metrics['per_keypoint']
     total_kp = metrics['total_keypoints_evaluated']
     total_inst = metrics['total_instances']
+    class_acc = metrics.get('class_accuracy', 0.0)
     
     print("\n" + "=" * 80)
-    print("                SHOE VTO M1 KEYPOINT EVALUATION REPORT")
+    print("                SHOE VTO KEYPOINT EVALUATION REPORT")
     print("=" * 80)
     
-    print("\n📊 OVERALL PCK AT MULTIPLE THRESHOLDS:")
-    print(f"  • Overall PCK@0.20 (Coarse) : {overall[0.2]:.2%} ({overall[0.2]*100:.1f}%)")
-    print(f"  • Overall PCK@0.10 (Medium) : {overall[0.1]:.2%} ({overall[0.1]*100:.1f}%)")
-    print(f"  • Overall PCK@0.05 (Precise): {overall[0.05]:.2%} ({overall[0.05]*100:.1f}%)")
+    print("\n📊 MULTI-THRESHOLD PCK SUMMARY:")
+    print(f"  • Overall PCK@0.20 (Coarse) : {overall[0.2]:.2%}  |  Foot-14: {foot14.get(0.2, 0.0):.2%}  |  Leg-2: {leg2.get(0.2, 0.0):.2%}")
+    print(f"  • Overall PCK@0.10 (Medium) : {overall[0.1]:.2%}  |  Foot-14: {foot14.get(0.1, 0.0):.2%}  |  Leg-2: {leg2.get(0.1, 0.0):.2%}")
+    print(f"  • Overall PCK@0.05 (Precise): {overall[0.05]:.2%}  |  Foot-14: {foot14.get(0.05, 0.0):.2%}  |  Leg-2: {leg2.get(0.05, 0.0):.2%}")
+    print(f"  • Left/Right Class Accuracy : {class_acc:.2%}")
     
     print("\n🎯 PER-KEYPOINT PCK BREAKDOWN (All 16 Keypoints):")
     print("-" * 80)
@@ -287,6 +324,13 @@ def main():
         help='Directory to save evaluation visualizations and summary'
     )
     parser.add_argument(
+        '--split',
+        type=str,
+        default='valid',
+        choices=['valid', 'test', 'train'],
+        help='Dataset split to evaluate on (valid, test, train)'
+    )
+    parser.add_argument(
         '--num_vis',
         type=int,
         default=8,
@@ -306,11 +350,11 @@ def main():
         
     data_root = Path(args.dataset_root)
     if not data_root.is_absolute():
-        if (data_root / "valid" / "images").exists():
+        if (data_root / args.split / "images").exists():
             data_root = data_root.resolve()
-        elif (base_dir / data_root / "valid" / "images").exists():
+        elif (base_dir / data_root / args.split / "images").exists():
             data_root = (base_dir / data_root).resolve()
-        elif Path("/content/dataset/shuffled_v4/valid/images").exists():
+        elif Path(f"/content/dataset/shuffled_v4/{args.split}/images").exists():
             data_root = Path("/content/dataset/shuffled_v4")
         
     out_dir = Path(args.output_dir)
@@ -318,15 +362,15 @@ def main():
         out_dir = (base_dir / out_dir).resolve()
         
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-    print(f"Evaluating on device: {device}")
+    print(f"Evaluating on device: {device} | Split: {args.split}")
     
     # Load dataset
-    val_images = data_root / "valid" / "images"
-    val_labels = data_root / "valid" / "labels"
+    val_images = data_root / args.split / "images"
+    val_labels = data_root / args.split / "labels"
     if not val_images.exists():
         # Fallback to local inspect folder path
-        val_images = Path("dataset/shuffled_v3/valid/images").resolve()
-        val_labels = Path("dataset/shuffled_v3/valid/labels").resolve()
+        val_images = Path(f"dataset/shuffled_v3/{args.split}/images").resolve()
+        val_labels = Path(f"dataset/shuffled_v3/{args.split}/labels").resolve()
         
     val_dataset = YOLOFootDataset(
         images_dir=val_images,

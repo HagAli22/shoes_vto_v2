@@ -180,6 +180,28 @@ def compute_multi_threshold_pck(pred_keypoints, gt_keypoints, gt_visibility, bbo
         correct_t = (norm_dist < t) & valid
         overall_results[t] = (correct_t.sum().float() / (total_valid + 1e-6)).item()
         
+    # Also compute 14 foot keypoints (excluding ankle_center:12 and shin_mid:15)
+    # and 2 leg keypoints (ankle_center:12 and shin_mid:15)
+    foot_indices = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 13, 14]
+    leg_indices = [12, 15]
+    
+    foot_results = {}
+    leg_results = {}
+    for t in thresholds:
+        foot_v = valid[:, foot_indices]
+        if foot_v.sum() > 0:
+            foot_c = ((norm_dist[:, foot_indices] < t) & foot_v).sum().float()
+            foot_results[t] = (foot_c / foot_v.sum().float()).item()
+        else:
+            foot_results[t] = 0.0
+            
+        leg_v = valid[:, leg_indices]
+        if leg_v.sum() > 0:
+            leg_c = ((norm_dist[:, leg_indices] < t) & leg_v).sum().float()
+            leg_results[t] = (leg_c / leg_v.sum().float()).item()
+        else:
+            leg_results[t] = 0.0
+        
     per_kp_results = {}
     for kp_idx in range(16):
         kp_name = KEYPOINT_NAMES[kp_idx]
@@ -203,6 +225,8 @@ def compute_multi_threshold_pck(pred_keypoints, gt_keypoints, gt_visibility, bbo
     
     return {
         'overall': overall_results,
+        'foot_14': foot_results,
+        'leg_2': leg_results,
         'per_keypoint': per_kp_results,
         'ranked_by_pck@0.2': ranked_by_pck20,
         'total_instances': len(pred_keypoints),
