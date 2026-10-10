@@ -1,3 +1,6 @@
 dataset/
 *.zip
 outputs/
+
+__pycache__/
+*.pyc
