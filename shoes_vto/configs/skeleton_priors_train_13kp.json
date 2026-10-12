@@ -1,0 +1,344 @@
+{
+  "3_4": {
+    "u": 3,
+    "v": 4,
+    "mean_dist": 0.3818,
+    "std_dist": 0.2352,
+    "min_dist": 0.0152,
+    "max_dist": 5.2057,
+    "count": 2669
+  },
+  "4_3": {
+    "u": 4,
+    "v": 3,
+    "mean_dist": 0.3818,
+    "std_dist": 0.2352,
+    "min_dist": 0.0152,
+    "max_dist": 5.2057,
+    "count": 2669
+  },
+  "5_7": {
+    "u": 5,
+    "v": 7,
+    "mean_dist": 0.1993,
+    "std_dist": 0.0964,
+    "min_dist": 0.0022,
+    "max_dist": 0.7487,
+    "count": 2020
+  },
+  "7_5": {
+    "u": 7,
+    "v": 5,
+    "mean_dist": 0.1993,
+    "std_dist": 0.0964,
+    "min_dist": 0.0022,
+    "max_dist": 0.7487,
+    "count": 2020
+  },
+  "0_2": {
+    "u": 0,
+    "v": 2,
+    "mean_dist": 0.7412,
+    "std_dist": 0.0518,
+    "min_dist": 0.2142,
+    "max_dist": 0.7692,
+    "count": 1391
+  },
+  "2_0": {
+    "u": 2,
+    "v": 0,
+    "mean_dist": 0.7412,
+    "std_dist": 0.0518,
+    "min_dist": 0.2142,
+    "max_dist": 0.7692,
+    "count": 1391
+  },
+  "5_10": {
+    "u": 5,
+    "v": 10,
+    "mean_dist": 0.4996,
+    "std_dist": 0.1715,
+    "min_dist": 0.0708,
+    "max_dist": 0.7692,
+    "count": 2718
+  },
+  "10_5": {
+    "u": 10,
+    "v": 5,
+    "mean_dist": 0.4996,
+    "std_dist": 0.1715,
+    "min_dist": 0.0708,
+    "max_dist": 0.7692,
+    "count": 2718
+  },
+  "0_5": {
+    "u": 0,
+    "v": 5,
+    "mean_dist": 0.5402,
+    "std_dist": 0.1753,
+    "min_dist": 0.0701,
+    "max_dist": 0.7692,
+    "count": 1971
+  },
+  "5_0": {
+    "u": 5,
+    "v": 0,
+    "mean_dist": 0.5402,
+    "std_dist": 0.1753,
+    "min_dist": 0.0701,
+    "max_dist": 0.7692,
+    "count": 1971
+  },
+  "8_12": {
+    "u": 8,
+    "v": 12,
+    "mean_dist": 0.2148,
+    "std_dist": 0.1004,
+    "min_dist": 0.0081,
+    "max_dist": 1.0769,
+    "count": 2514
+  },
+  "12_8": {
+    "u": 12,
+    "v": 8,
+    "mean_dist": 0.2148,
+    "std_dist": 0.1004,
+    "min_dist": 0.0081,
+    "max_dist": 1.0769,
+    "count": 2514
+  },
+  "9_11": {
+    "u": 9,
+    "v": 11,
+    "mean_dist": 0.2427,
+    "std_dist": 0.1171,
+    "min_dist": 0.0172,
+    "max_dist": 1.505,
+    "count": 1168
+  },
+  "11_9": {
+    "u": 11,
+    "v": 9,
+    "mean_dist": 0.2427,
+    "std_dist": 0.1171,
+    "min_dist": 0.0172,
+    "max_dist": 1.505,
+    "count": 1168
+  },
+  "2_5": {
+    "u": 2,
+    "v": 5,
+    "mean_dist": 0.4337,
+    "std_dist": 0.1237,
+    "min_dist": 0.1053,
+    "max_dist": 0.7692,
+    "count": 1876
+  },
+  "5_2": {
+    "u": 5,
+    "v": 2,
+    "mean_dist": 0.4337,
+    "std_dist": 0.1237,
+    "min_dist": 0.1053,
+    "max_dist": 0.7692,
+    "count": 1876
+  },
+  "1_12": {
+    "u": 1,
+    "v": 12,
+    "mean_dist": 0.2724,
+    "std_dist": 0.1571,
+    "min_dist": 0.0218,
+    "max_dist": 1.1138,
+    "count": 604
+  },
+  "12_1": {
+    "u": 12,
+    "v": 1,
+    "mean_dist": 0.2724,
+    "std_dist": 0.1571,
+    "min_dist": 0.0218,
+    "max_dist": 1.1138,
+    "count": 604
+  },
+  "4_5": {
+    "u": 4,
+    "v": 5,
+    "mean_dist": 0.3003,
+    "std_dist": 0.1324,
+    "min_dist": 0.033,
+    "max_dist": 1.0346,
+    "count": 2495
+  },
+  "5_4": {
+    "u": 5,
+    "v": 4,
+    "mean_dist": 0.3003,
+    "std_dist": 0.1324,
+    "min_dist": 0.033,
+    "max_dist": 1.0346,
+    "count": 2495
+  },
+  "5_6": {
+    "u": 5,
+    "v": 6,
+    "mean_dist": 0.2109,
+    "std_dist": 0.0985,
+    "min_dist": 0.018,
+    "max_dist": 0.8152,
+    "count": 2548
+  },
+  "6_5": {
+    "u": 6,
+    "v": 5,
+    "mean_dist": 0.2109,
+    "std_dist": 0.0985,
+    "min_dist": 0.018,
+    "max_dist": 0.8152,
+    "count": 2548
+  },
+  "8_11": {
+    "u": 8,
+    "v": 11,
+    "mean_dist": 0.2374,
+    "std_dist": 0.1112,
+    "min_dist": 0.011,
+    "max_dist": 1.2003,
+    "count": 2308
+  },
+  "11_8": {
+    "u": 11,
+    "v": 8,
+    "mean_dist": 0.2374,
+    "std_dist": 0.1112,
+    "min_dist": 0.011,
+    "max_dist": 1.2003,
+    "count": 2308
+  },
+  "1_2": {
+    "u": 1,
+    "v": 2,
+    "mean_dist": 0.1255,
+    "std_dist": 0.0652,
+    "min_dist": 0.0212,
+    "max_dist": 0.5347,
+    "count": 626
+  },
+  "2_1": {
+    "u": 2,
+    "v": 1,
+    "mean_dist": 0.1255,
+    "std_dist": 0.0652,
+    "min_dist": 0.0212,
+    "max_dist": 0.5347,
+    "count": 626
+  },
+  "0_10": {
+    "u": 0,
+    "v": 10,
+    "mean_dist": 0.0573,
+    "std_dist": 0.0493,
+    "min_dist": 0.0017,
+    "max_dist": 0.7325,
+    "count": 2184
+  },
+  "10_0": {
+    "u": 10,
+    "v": 0,
+    "mean_dist": 0.0573,
+    "std_dist": 0.0493,
+    "min_dist": 0.0017,
+    "max_dist": 0.7325,
+    "count": 2184
+  },
+  "2_7": {
+    "u": 2,
+    "v": 7,
+    "mean_dist": 0.4234,
+    "std_dist": 0.1609,
+    "min_dist": 0.0732,
+    "max_dist": 1.0975,
+    "count": 1286
+  },
+  "7_2": {
+    "u": 7,
+    "v": 2,
+    "mean_dist": 0.4234,
+    "std_dist": 0.1609,
+    "min_dist": 0.0732,
+    "max_dist": 1.0975,
+    "count": 1286
+  },
+  "3_5": {
+    "u": 3,
+    "v": 5,
+    "mean_dist": 0.3151,
+    "std_dist": 0.1178,
+    "min_dist": 0.027,
+    "max_dist": 1.1329,
+    "count": 2782
+  },
+  "5_3": {
+    "u": 5,
+    "v": 3,
+    "mean_dist": 0.3151,
+    "std_dist": 0.1178,
+    "min_dist": 0.027,
+    "max_dist": 1.1329,
+    "count": 2782
+  },
+  "5_11": {
+    "u": 5,
+    "v": 11,
+    "mean_dist": 0.2637,
+    "std_dist": 0.1413,
+    "min_dist": 0.0212,
+    "max_dist": 1.1789,
+    "count": 2626
+  },
+  "11_5": {
+    "u": 11,
+    "v": 5,
+    "mean_dist": 0.2637,
+    "std_dist": 0.1413,
+    "min_dist": 0.0212,
+    "max_dist": 1.1789,
+    "count": 2626
+  },
+  "9_12": {
+    "u": 9,
+    "v": 12,
+    "mean_dist": 0.2239,
+    "std_dist": 0.1068,
+    "min_dist": 0.0151,
+    "max_dist": 1.3019,
+    "count": 1312
+  },
+  "12_9": {
+    "u": 12,
+    "v": 9,
+    "mean_dist": 0.2239,
+    "std_dist": 0.1068,
+    "min_dist": 0.0151,
+    "max_dist": 1.3019,
+    "count": 1312
+  },
+  "2_6": {
+    "u": 2,
+    "v": 6,
+    "mean_dist": 0.3733,
+    "std_dist": 0.1369,
+    "min_dist": 0.0504,
+    "max_dist": 1.2562,
+    "count": 1837
+  },
+  "6_2": {
+    "u": 6,
+    "v": 2,
+    "mean_dist": 0.3733,
+    "std_dist": 0.1369,
+    "min_dist": 0.0504,
+    "max_dist": 1.2562,
+    "count": 1837
+  }
+}

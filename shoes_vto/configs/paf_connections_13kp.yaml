@@ -1,0 +1,41 @@
+# PAF (Part Affinity Field) Limb Connections for 13 Keypoints
+# 16 limb pairs for 13 keypoints
+# Format: [from_keypoint_index, to_keypoint_index, connection_name]
+
+num_limbs: 16
+
+limb_pairs:
+  # Sole chain (3 connections)
+  - [10, 0, "toe_tip → toe_ground"]          # Connection 0
+  - [0, 2, "toe_ground → heel_ground"]       # Connection 1
+  - [2, 1, "heel_ground → heel_back"]        # Connection 2
+  
+  # Ball and Instep (3 connections)
+  - [3, 4, "ball_medial → ball_lateral"]     # Connection 3 (Metatarsal bridge)
+  - [3, 5, "ball_medial → instep_top"]       # Connection 4
+  - [4, 5, "ball_lateral → instep_top"]      # Connection 5
+  
+  # Mid-sole connections (4 connections)
+  - [2, 6, "heel_ground → arch_medial"]      # Connection 6
+  - [2, 7, "heel_ground → midfoot_lateral"]  # Connection 7
+  - [6, 5, "arch_medial → instep_top"]       # Connection 8
+  - [7, 5, "midfoot_lateral → instep_top"]   # Connection 9
+  
+  # Dorsal Collar Bridge & Ankle Loop (5 connections)
+  - [5, 11, "instep_top → throat"]           # Connection 10
+  - [11, 8, "throat → malleolus_medial"]     # Connection 11
+  - [11, 9, "throat → malleolus_lateral"]    # Connection 12
+  - [8, 12, "malleolus_medial → achilles"]   # Connection 13
+  - [9, 12, "malleolus_lateral → achilles"]  # Connection 14
+  
+  # Posterior Calcaneal Tendon Lock (1 connection)
+  - [12, 1, "achilles → heel_back"]          # Connection 15
+
+# PAF encoding
+# Total PAF channels = 16 limbs × 2 = 32 channels
+paf_channels: 32
+
+# PAF generation parameters
+paf_width: 8
+paf_threshold: 0.05
+

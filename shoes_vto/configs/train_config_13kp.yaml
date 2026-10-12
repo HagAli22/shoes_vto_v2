@@ -1,0 +1,32 @@
+# Training Configuration for ARShoe M1v2 (13 Keypoints)
+model:
+  name: "arshoe_m1v2"
+  num_keypoints: 13
+  num_limbs: 16
+  num_classes: 2
+  pretrained: true
+
+dataset:
+  root: "dataset/merged_v3_v4_13kp"
+  train_split: "train"
+  valid_split: "valid"
+  test_split: "test"
+  image_size: 256
+  heatmap_size: 64
+
+training:
+  batch_size: 16
+  epochs: 100
+  learning_rate: 0.0005
+  eta_min: 0.000001
+  weight_decay: 0.0001
+  use_amp: true
+  num_workers: 0
+
+loss_weights:
+  heatmap: 4.0
+  paf: 2.0
+  class: 1.5
+
+output_dir: "outputs/m1v2_13kp_training"
+

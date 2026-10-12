@@ -73,14 +73,23 @@ def load_model(checkpoint_path, device='cpu'):
         cleaned_key = k.replace('_orig_mod.', '')
         cleaned_state_dict[cleaned_key] = v
         
+    # Auto-detect keypoints and limbs from state_dict shapes
+    num_k = 16
+    num_limbs = 15
+    for k, v in cleaned_state_dict.items():
+        if 'hm_head' in k and 'weight' in k and hasattr(v, 'dim') and v.dim() == 4:
+            num_k = v.shape[0]
+        if 'paf_head' in k and 'weight' in k and hasattr(v, 'dim') and v.dim() == 4:
+            num_limbs = v.shape[0] // 2
+            
     # Auto-detect model architecture from state_dict keys
     is_v2 = any('s4.' in k or 'cls_global.' in k or 'fpn_conv.' in k for k in cleaned_state_dict.keys())
     if is_v2:
-        print("  Detected Architecture: ARShoeM1v2 (MobileNetV3 + FPN + Global Context)")
-        model = ARShoeM1v2(pretrained=False, num_keypoints=16, num_limbs=15, num_classes=2)
+        print(f"  Detected Architecture: ARShoeM1v2 ({num_k} KPs, {num_limbs} limbs)")
+        model = ARShoeM1v2(pretrained=False, num_keypoints=num_k, num_limbs=num_limbs, num_classes=2)
     else:
-        print("  Detected Architecture: ARShoeM1 (Fast-SCNN)")
-        model = ARShoeM1(encoder_channels=128, num_keypoints=16, num_limbs=15, num_classes=2)
+        print(f"  Detected Architecture: ARShoeM1 ({num_k} KPs, {num_limbs} limbs)")
+        model = ARShoeM1(encoder_channels=128, num_keypoints=num_k, num_limbs=num_limbs, num_classes=2)
         
     missing, unexpected = model.load_state_dict(cleaned_state_dict, strict=True)
     if len(missing) > 0 or len(unexpected) > 0:
@@ -135,7 +144,8 @@ def run_evaluation(model, val_dataset, device, output_dir, num_vis=8):
             
             # Process instances
             for inst_idx, inst in enumerate(instances):
-                if 'keypoints' in inst and len(inst['keypoints']) == 16:
+                inst_kps_cnt = len(inst.get('keypoints', []))
+                if 'keypoints' in inst and inst_kps_cnt in (13, 16):
                     gt_kp = [kp[:2] for kp in inst['keypoints']]
                     gt_v = [kp[2] for kp in inst['keypoints']]
                     cx, cy, w, h = inst['bbox']
@@ -143,26 +153,26 @@ def run_evaluation(model, val_dataset, device, output_dir, num_vis=8):
                     cname = inst.get('class_name', f"foot_{inst.get('class_id', 0)}")
                     gt_cls = inst.get('class_id', 0)
                     
-                    # 1. Instance-scoped foot window (for foot keypoints 0..11, 13, 14)
+                    # 1. Instance-scoped foot window
                     x1 = int(max(0, (cx - w * 0.575) * 64))
                     y1 = int(max(0, (cy - h * 0.575) * 64))
                     x2 = int(min(64, (cx + w * 0.575) * 64))
                     y2 = int(min(64, (cy + h * 0.575) * 64))
                     
-                    # 2. Ankle/Leg window (for ankle_center:12 and shin_mid:15)
-                    # Leg extends upward from foot, so expand vertically upwards by up to 1.5x bbox height
-                    leg_x1 = int(max(0, (cx - w * 0.75) * 64))
-                    leg_x2 = int(min(64, (cx + w * 0.75) * 64))
-                    leg_y1 = int(max(0, (cy - h * 1.5) * 64))
-                    leg_y2 = int(min(64, (cy + h * 0.575) * 64))
-                    
                     hm_inst = torch.zeros_like(hm_img)
-                    # Foot keypoints
-                    foot_indices = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 13, 14]
-                    hm_inst[foot_indices, y1:y2, x1:x2] = hm_img[foot_indices, y1:y2, x1:x2]
-                    # Leg keypoints
-                    leg_indices = [12, 15]
-                    hm_inst[leg_indices, leg_y1:leg_y2, leg_x1:leg_x2] = hm_img[leg_indices, leg_y1:leg_y2, leg_x1:leg_x2]
+                    if inst_kps_cnt == 13:
+                        hm_inst[:, y1:y2, x1:x2] = hm_img[:, y1:y2, x1:x2]
+                    else:
+                        # 2. Ankle/Leg window (for ankle_center:12 and shin_mid:15)
+                        leg_x1 = int(max(0, (cx - w * 0.75) * 64))
+                        leg_x2 = int(min(64, (cx + w * 0.75) * 64))
+                        leg_y1 = int(max(0, (cy - h * 1.5) * 64))
+                        leg_y2 = int(min(64, (cy + h * 0.575) * 64))
+                        
+                        foot_indices = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 13, 14]
+                        leg_indices = [12, 15]
+                        hm_inst[foot_indices, y1:y2, x1:x2] = hm_img[foot_indices, y1:y2, x1:x2]
+                        hm_inst[leg_indices, leg_y1:leg_y2, leg_x1:leg_x2] = hm_img[leg_indices, leg_y1:leg_y2, leg_x1:leg_x2]
                     
                     pred_inst_tensor, pred_conf_tensor = decode_heatmaps_to_keypoints(hm_inst.unsqueeze(0), image_size=256)
                     pred_kps_np = pred_inst_tensor[0].cpu().numpy()
@@ -241,7 +251,8 @@ def print_evaluation_summary(metrics, num_images, vis_dir):
     foot14 = metrics.get('foot_14', {})
     leg2 = metrics.get('leg_2', {})
     per_kp = metrics['per_keypoint']
-    total_kp = metrics['total_keypoints_evaluated']
+    num_k = len(per_kp)
+    total_kp = metrics.get('total_keypoints_evaluated', 0)
     total_inst = metrics['total_instances']
     class_acc = metrics.get('class_accuracy', 0.0)
     
@@ -250,17 +261,22 @@ def print_evaluation_summary(metrics, num_images, vis_dir):
     print("=" * 80)
     
     print("\n📊 MULTI-THRESHOLD PCK SUMMARY:")
-    print(f"  • Overall PCK@0.20 (Coarse) : {overall[0.2]:.2%}  |  Foot-14: {foot14.get(0.2, 0.0):.2%}  |  Leg-2: {leg2.get(0.2, 0.0):.2%}")
-    print(f"  • Overall PCK@0.10 (Medium) : {overall[0.1]:.2%}  |  Foot-14: {foot14.get(0.1, 0.0):.2%}  |  Leg-2: {leg2.get(0.1, 0.0):.2%}")
-    print(f"  • Overall PCK@0.05 (Precise): {overall[0.05]:.2%}  |  Foot-14: {foot14.get(0.05, 0.0):.2%}  |  Leg-2: {leg2.get(0.05, 0.0):.2%}")
+    if num_k == 13:
+        print(f"  • Overall PCK@0.20 (Coarse) : {overall[0.2]:.2%}")
+        print(f"  • Overall PCK@0.10 (Medium) : {overall[0.1]:.2%}")
+        print(f"  • Overall PCK@0.05 (Precise): {overall[0.05]:.2%}")
+    else:
+        print(f"  • Overall PCK@0.20 (Coarse) : {overall[0.2]:.2%}  |  Foot-14: {foot14.get(0.2, 0.0):.2%}  |  Leg-2: {leg2.get(0.2, 0.0):.2%}")
+        print(f"  • Overall PCK@0.10 (Medium) : {overall[0.1]:.2%}  |  Foot-14: {foot14.get(0.1, 0.0):.2%}  |  Leg-2: {leg2.get(0.1, 0.0):.2%}")
+        print(f"  • Overall PCK@0.05 (Precise): {overall[0.05]:.2%}  |  Foot-14: {foot14.get(0.05, 0.0):.2%}  |  Leg-2: {leg2.get(0.05, 0.0):.2%}")
     print(f"  • Left/Right Class Accuracy : {class_acc:.2%}")
     
-    print("\n🎯 PER-KEYPOINT PCK BREAKDOWN (All 16 Keypoints):")
+    print(f"\n🎯 PER-KEYPOINT PCK BREAKDOWN (All {num_k} Keypoints):")
     print("-" * 80)
     print(f" {'Idx':<4} | {'Anatomical Name':<18} | {'Valid #':<7} | {'PCK@0.20':<10} | {'PCK@0.10':<10} | {'PCK@0.05':<10} | {'Status'}")
     print("-" * 80)
     
-    for idx in range(16):
+    for idx in range(num_k):
         k = per_kp[idx]
         name = k['name']
         cnt = k['valid_count']
@@ -359,11 +375,19 @@ def main():
         
     out_dir = Path(args.output_dir)
     if not out_dir.is_absolute():
-        out_dir = (base_dir / out_dir).resolve()
+        if Path(args.output_dir).parent.exists():
+            out_dir = Path(args.output_dir).resolve()
+        else:
+            out_dir = (base_dir / out_dir).resolve()
         
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     print(f"Evaluating on device: {device} | Split: {args.split}")
     
+    # Load model
+    model = load_model(ckpt_path, device=device)
+    num_k = getattr(model, 'num_keypoints', 16)
+    flip_idx = [0, 1, 2, 4, 3, 5, 7, 6, 9, 8, 10, 11, 12] if num_k == 13 else None
+
     # Load dataset
     val_images = data_root / args.split / "images"
     val_labels = data_root / args.split / "labels"
@@ -377,11 +401,10 @@ def main():
         labels_dir=val_labels,
         img_size=256,
         augment=False,
-        cache_in_memory=True
+        cache_in_memory=True,
+        num_keypoints=num_k,
+        flip_idx=flip_idx
     )
-    
-    # Load model
-    model = load_model(ckpt_path, device=device)
     
     # Run evaluation
     metrics, vis_dir = run_evaluation(

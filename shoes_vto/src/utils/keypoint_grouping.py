@@ -20,13 +20,18 @@ from pathlib import Path
 from scipy.ndimage import maximum_filter
 
 
-def load_paf_config():
+def load_paf_config(config_name="paf_connections.yaml"):
     """Load PAF limb connection configuration"""
+    if isinstance(config_name, (str, Path)) and Path(config_name).is_file():
+        with open(config_name, 'r') as f:
+            return yaml.safe_load(f)
+            
     # Try multiple paths to find the config
+    fname = Path(config_name).name
     possible_paths = [
-        Path(__file__).parent.parent.parent / "configs" / "paf_connections.yaml",  # From src/utils/
-        Path("shoes_vto/configs/paf_connections.yaml"),  # From project root
-        Path("configs/paf_connections.yaml"),  # From shoes_vto/
+        Path(__file__).parent.parent.parent / "configs" / fname,  # From src/utils/
+        Path("shoes_vto/configs") / fname,  # From project root
+        Path("configs") / fname,  # From shoes_vto/
     ]
     
     for config_path in possible_paths:
@@ -38,12 +43,13 @@ def load_paf_config():
     raise FileNotFoundError(f"Could not find paf_connections.yaml in any of: {possible_paths}")
 
 
-def load_skeleton_priors():
+def load_skeleton_priors(config_name="skeleton_priors_train.json"):
     """Load learned pairwise skeleton distance priors from training set"""
+    fname = Path(config_name).name
     possible_paths = [
-        Path(__file__).parent.parent.parent / "configs" / "skeleton_priors_train.json",
-        Path("shoes_vto/configs/skeleton_priors_train.json"),
-        Path("configs/skeleton_priors_train.json"),
+        Path(__file__).parent.parent.parent / "configs" / fname,
+        Path("shoes_vto/configs") / fname,
+        Path("configs") / fname,
     ]
     for config_path in possible_paths:
         if config_path.exists():
@@ -448,7 +454,10 @@ def compute_foot_box(keypoints, img_w, img_h, scale_x=1.0, scale_y=1.0, calib=No
     if calib is None:
         calib = load_box_calibration()
 
-    FOOT_KP_INDICES = [i for i in range(16) if i not in (12, 15)]
+    if len(keypoints) == 13:
+        FOOT_KP_INDICES = list(range(13))
+    else:
+        FOOT_KP_INDICES = [i for i in range(16) if i not in (12, 15)]
     valid_pts = []
     for idx in FOOT_KP_INDICES:
         if idx < len(keypoints):
@@ -495,14 +504,15 @@ def decode_spatial_instances_single(
     w_paf=0.5,
     w_geom=0.20,
     max_iter=3,
-    use_skeleton=True
+    use_skeleton=True,
+    paf_config=None
 ):
     """
     Instance decoding using Spatial Clustering of Heatmap Peaks with Skeleton Consistency:
     1. Discovers spatial instance centroids and Voronoi partition.
     2. Gathers top-3 candidate peaks per channel in each foot partition.
     3. Optimizes joint keypoint selection using PAF vector fields and learned pairwise distance priors.
-    4. Prevents shrink bias and cross-foot limb jumps while preserving all 16 keypoints.
+    4. Prevents shrink bias and cross-foot limb jumps while preserving all keypoints (13 or 16).
     """
     if isinstance(heatmaps, torch.Tensor):
         heatmaps = heatmaps.detach().cpu().numpy()
@@ -513,31 +523,33 @@ def decode_spatial_instances_single(
 
     H, W = heatmaps.shape[1], heatmaps.shape[2]
 
-    # 1. Detect peaks across all 16 channels
+    num_k = heatmaps.shape[0]
+
+    # 1. Detect peaks across all channels
     all_peaks = {}
-    for kp_idx in range(16):
+    for kp_idx in range(num_k):
         all_peaks[kp_idx] = detect_peaks(heatmaps[kp_idx], threshold=peak_threshold, nms_window=nms_window, subpixel=subpixel)
 
     # 2. Collect high-confidence anchor peaks to discover foot centroids:
-    anchor_indices = [5, 6, 12, 1]
+    anchor_indices = [5, 10, 1, 3] if num_k == 13 else [5, 6, 12, 1]
     anchor_pts = []
     for kp_idx in anchor_indices:
         for p in all_peaks.get(kp_idx, []):
             if p[2] > 0.35:
                 anchor_pts.append((p[0], p[1], kp_idx, p[2]))
 
-    # Fallback to any strong foot keypoints if anchors sparse (exclude shin_mid kp 15)
+    # Fallback to any strong foot keypoints if anchors sparse (exclude shin_mid kp 15 if 16-KP)
     if len(anchor_pts) < 4:
-        for kp_idx in range(16):
-            if kp_idx == 15:
+        for kp_idx in range(num_k):
+            if num_k == 16 and kp_idx == 15:
                 continue
             for p in all_peaks.get(kp_idx, []):
                 if p[2] > 0.35:
                     anchor_pts.append((p[0], p[1], kp_idx, p[2]))
 
     if len(anchor_pts) < 4:
-        for kp_idx in range(16):
-            if kp_idx == 15:
+        for kp_idx in range(num_k):
+            if num_k == 16 and kp_idx == 15:
                 continue
             for p in all_peaks.get(kp_idx, []):
                 if p[2] > 0.15:
@@ -564,8 +576,8 @@ def decode_spatial_instances_single(
     else:
         centers = [np.mean(pts_xy, axis=0)]
 
-    PERIPHERAL_KPS = {0, 1, 2, 9, 10, 11}
-    LEG_KPS = {12, 15}
+    PERIPHERAL_KPS = {0, 1, 2, 8, 9, 10} if num_k == 13 else {0, 1, 2, 9, 10, 11}
+    LEG_KPS = {12} if num_k == 13 else {12, 15}
 
     # Precompute Voronoi masks for partition fallback
     yy, xx = np.indices((H, W), dtype=np.float32)
@@ -580,16 +592,20 @@ def decode_spatial_instances_single(
         voronoi_masks.append(mask)
 
     # Skeleton graph setup
-    paf_cfg = load_paf_config()
+    if paf_config is None:
+        paf_cfg = load_paf_config("paf_connections_13kp.yaml" if num_k == 13 else "paf_connections.yaml")
+    else:
+        paf_cfg = paf_config
     limb_pairs = paf_cfg.get("limb_pairs", [])
-    skeleton_priors = load_skeleton_priors()
+
+    skeleton_priors = load_skeleton_priors("skeleton_priors_train_13kp.json" if num_k == 13 else "skeleton_priors_train.json")
 
     neighbors = defaultdict(list)
     for l_idx, (u, v, _) in enumerate(limb_pairs):
         neighbors[u].append((v, l_idx, True))
         neighbors[v].append((u, l_idx, False))
 
-    extra_edges = [(2, 5), (0, 5), (11, 5)]
+    extra_edges = [(2, 5), (0, 5), (10, 5)] if num_k == 13 else [(2, 5), (0, 5), (11, 5)]
     for u, v in extra_edges:
         neighbors[u].append((v, -1, True))
         neighbors[v].append((u, -1, False))
@@ -601,10 +617,10 @@ def decode_spatial_instances_single(
 
         # Gather Top-3 candidates per keypoint in this foot's Voronoi region
         candidates_per_kp = {}
-        for kp_idx in range(16):
+        for kp_idx in range(num_k):
             c_peaks = all_peaks.get(kp_idx, [])
             valid_cands = []
-            max_r = 22.0 if kp_idx == 15 else max_radius
+            max_r = 22.0 if (num_k == 16 and kp_idx == 15) else max_radius
 
             for p in c_peaks:
                 dist = np.sqrt((p[0] - cx)**2 + (p[1] - cy)**2)
@@ -647,7 +663,8 @@ def decode_spatial_instances_single(
             candidates_per_kp[kp_idx] = valid_cands
 
         # Estimate instance scale
-        anchor_coords = [candidates_per_kp[k][0][:2] for k in [5, 6, 0, 11, 2] if candidates_per_kp[k]]
+        scale_anchors = [5, 0, 10, 2] if num_k == 13 else [5, 6, 0, 11, 2]
+        anchor_coords = [candidates_per_kp[k][0][:2] for k in scale_anchors if candidates_per_kp[k]]
         if len(anchor_coords) >= 2:
             pts_arr = np.array(anchor_coords)
             foot_scale = float(max(10.0, np.hypot(pts_arr[:, 0].max() - pts_arr[:, 0].min(),
@@ -655,13 +672,13 @@ def decode_spatial_instances_single(
         else:
             foot_scale = 22.0
 
-        current_selection = {k: (0 if candidates_per_kp[k] else -1) for k in range(16)}
+        current_selection = {k: (0 if candidates_per_kp[k] else -1) for k in range(num_k)}
 
         # Joint Skeleton Optimization via Iterated Conditional Modes (ICM)
         if pafs is not None and use_skeleton:
             for _ in range(max_iter):
                 changed = False
-                for k in range(16):
+                for k in range(num_k):
                     cands = candidates_per_kp[k]
                     if len(cands) <= 1:
                         continue
@@ -729,7 +746,7 @@ def decode_spatial_instances_single(
 
         inst_kps = []
         scores = []
-        for k in range(16):
+        for k in range(num_k):
             sel_idx = current_selection[k]
             if sel_idx >= 0 and candidates_per_kp[k]:
                 p = candidates_per_kp[k][sel_idx]
@@ -796,13 +813,14 @@ def group_keypoints(heatmaps, pafs, class_probs,
                     min_keypoints=5,
                     max_instances=2,
                     subpixel=True,
-                    method='spatial'):
+                    method='spatial',
+                    paf_config=None):
     """
     Complete keypoint grouping pipeline
     
     Args:
-        heatmaps: [B, 16, H, W] keypoint heatmaps
-        pafs: [B, 30, H, W] PAF fields
+        heatmaps: [B, K, H, W] keypoint heatmaps (K=13 or 16)
+        pafs: [B, 2*L, H, W] PAF fields
         class_probs: [B, 2, H, W] class probability maps
         peak_threshold: Minimum peak confidence
         paf_threshold: Minimum PAF score (for method='paf')
@@ -811,11 +829,13 @@ def group_keypoints(heatmaps, pafs, class_probs,
         max_instances: Maximum instances to return per image
         subpixel: Whether to apply quadratic sub-pixel peak refinement
         method: 'spatial' (default, robust centroid cluster decoding) or 'paf' (legacy)
+        paf_config: Optional custom PAF config dictionary
     
     Returns:
         batch_instances: List of length B, each containing list of instances
     """
     batch_size = heatmaps.shape[0]
+    num_k = heatmaps.shape[1]
     batch_instances = []
 
     if method == 'spatial':
@@ -829,19 +849,23 @@ def group_keypoints(heatmaps, pafs, class_probs,
                 nms_window=nms_window,
                 min_keypoints=min_keypoints,
                 max_instances=max_instances,
-                subpixel=subpixel
+                subpixel=subpixel,
+                paf_config=paf_config
             )
             batch_instances.append(insts)
         return batch_instances
 
     # Legacy PAF method
-    config = load_paf_config()
+    if paf_config is None:
+        config = load_paf_config("paf_connections_13kp.yaml" if num_k == 13 else "paf_connections.yaml")
+    else:
+        config = paf_config
     limb_pairs = config['limb_pairs']
     
     for b in range(batch_size):
         # Detect peaks
         all_peaks = {}
-        for kp_idx in range(16):
+        for kp_idx in range(num_k):
             heatmap = heatmaps[b, kp_idx]
             peaks = detect_peaks(heatmap, peak_threshold, nms_window, subpixel=subpixel)
             all_peaks[kp_idx] = peaks

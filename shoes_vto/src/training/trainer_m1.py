@@ -183,7 +183,8 @@ class ARShoeM1Trainer:
                     instances,
                     heatmap_size=64,
                     paf_width=8,
-                    device=self.device  # 🚀 Generate directly on GPU
+                    device=self.device,  # 🚀 Generate directly on GPU
+                    paf_config=self.config.get('paf_config', None)
                 )
                 gt_class_maps, _ = generate_class_maps_batch(
                     instances,
@@ -278,7 +279,8 @@ class ARShoeM1Trainer:
                     instances,
                     heatmap_size=64,
                     paf_width=8,
-                    device=self.device  # 🚀 Generate directly on GPU
+                    device=self.device,  # 🚀 Generate directly on GPU
+                    paf_config=self.config.get('paf_config', None)
                 )
                 gt_class_maps, _ = generate_class_maps_batch(
                     instances,
@@ -312,7 +314,8 @@ class ARShoeM1Trainer:
                 for b, insts in enumerate(instances):
                     hm_img = hm_batch[b]
                     for inst in insts:
-                        if 'keypoints' in inst and len(inst['keypoints']) == 16:
+                        inst_kps = len(inst.get('keypoints', []))
+                        if inst_kps in (13, 16):
                             gt_kp = [kp[:2] for kp in inst['keypoints']]
                             gt_v = [kp[2] for kp in inst['keypoints']]
                             cx, cy, w, h = inst['bbox']
@@ -326,17 +329,20 @@ class ARShoeM1Trainer:
                             x2 = int(min(64, (cx + w * 0.575) * 64))
                             y2 = int(min(64, (cy + h * 0.575) * 64))
                             
-                            # Ankle/Leg window (for ankle_center:12 and shin_mid:15)
-                            leg_x1 = int(max(0, (cx - w * 0.75) * 64))
-                            leg_x2 = int(min(64, (cx + w * 0.75) * 64))
-                            leg_y1 = int(max(0, (cy - h * 1.5) * 64))
-                            leg_y2 = int(min(64, (cy + h * 0.575) * 64))
-                            
                             hm_inst = torch.zeros_like(hm_img)
-                            foot_indices = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 13, 14]
-                            leg_indices = [12, 15]
-                            hm_inst[foot_indices, y1:y2, x1:x2] = hm_img[foot_indices, y1:y2, x1:x2]
-                            hm_inst[leg_indices, leg_y1:leg_y2, leg_x1:leg_x2] = hm_img[leg_indices, leg_y1:leg_y2, leg_x1:leg_x2]
+                            if inst_kps == 13:
+                                hm_inst[:, y1:y2, x1:x2] = hm_img[:, y1:y2, x1:x2]
+                            else:
+                                # Ankle/Leg window (for ankle_center:12 and shin_mid:15)
+                                leg_x1 = int(max(0, (cx - w * 0.75) * 64))
+                                leg_x2 = int(min(64, (cx + w * 0.75) * 64))
+                                leg_y1 = int(max(0, (cy - h * 1.5) * 64))
+                                leg_y2 = int(min(64, (cy + h * 0.575) * 64))
+                                
+                                foot_indices = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 13, 14]
+                                leg_indices = [12, 15]
+                                hm_inst[foot_indices, y1:y2, x1:x2] = hm_img[foot_indices, y1:y2, x1:x2]
+                                hm_inst[leg_indices, leg_y1:leg_y2, leg_x1:leg_x2] = hm_img[leg_indices, leg_y1:leg_y2, leg_x1:leg_x2]
                             
                             pred_inst, _ = decode_heatmaps_to_keypoints(hm_inst.unsqueeze(0), image_size=img_sz)
                             all_pred_kps.append(pred_inst[0].cpu().numpy())

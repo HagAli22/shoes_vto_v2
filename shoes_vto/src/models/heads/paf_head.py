@@ -143,7 +143,7 @@ def generate_paf_field(height, width, kp_from, kp_to, paf_width=8, device='cpu')
     return paf_x, paf_y
 
 
-def generate_pafs_batch(keypoints_batch, heatmap_size=64, paf_width=8, device='cpu'):
+def generate_pafs_batch(keypoints_batch, heatmap_size=64, paf_width=8, device='cpu', paf_config=None):
     """
     Generate ground truth PAF fields for a batch - OPTIMIZED FOR GPU
     
@@ -152,13 +152,20 @@ def generate_pafs_batch(keypoints_batch, heatmap_size=64, paf_width=8, device='c
         heatmap_size: Size of PAF field (64 for stride=4)
         paf_width: Width of PAF region along limb
         device: 'cpu' or 'cuda' for GPU acceleration
+        paf_config: Optional PAF config dict, path, or None (defaults to paf_connections.yaml)
     
     Returns:
-        pafs: [B, 30, H, W] ground truth PAF fields
-        masks: [B, 15, H, W] binary masks (1 where limb is valid, 0 otherwise)
+        pafs: [B, 2*L, H, W] ground truth PAF fields
+        masks: [B, L, H, W] binary masks (1 where limb is valid, 0 otherwise)
     """
     # Load PAF limb pairs
-    config = load_paf_config()
+    if paf_config is None:
+        config = load_paf_config()
+    elif isinstance(paf_config, (str, Path)):
+        with open(paf_config, 'r') as f:
+            config = yaml.safe_load(f)
+    else:
+        config = paf_config
     limb_pairs = config['limb_pairs']  # [[from_idx, to_idx, name], ...]
     
     batch_size = len(keypoints_batch)

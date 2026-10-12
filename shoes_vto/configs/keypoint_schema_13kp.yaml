@@ -1,0 +1,73 @@
+# 13 Keypoint Schema for ARShoe M1v2 Ablation
+# Derived from dataset/merged_v3_v4 with ankle_center (12), ball_top (5), and shin_mid (15) removed.
+
+num_keypoints: 13
+
+keypoints:
+  - index: 0
+    name: toe_ground
+    tier: 1
+    description: "Inferior contact point under toe box / lateral toe base"
+    
+  - index: 1
+    name: heel_back
+    tier: 1
+    description: "Posterior-most prominence of calcaneus (Heel Back)"
+    
+  - index: 2
+    name: heel_ground
+    tier: 1
+    description: "Inferior ground contact point of calcaneus"
+    
+  - index: 3
+    name: ball_medial
+    tier: 1
+    description: "1st metatarsal head prominence (Medial Ball)"
+    
+  - index: 4
+    name: ball_lateral
+    tier: 1
+    description: "5th metatarsal head prominence (Lateral Ball)"
+    
+  - index: 5
+    name: instep_top
+    tier: 1
+    description: "Apex of the dorsal instep arch (old index 6)"
+    
+  - index: 6
+    name: arch_medial
+    tier: 2
+    description: "Medial longitudinal arch apex (old index 7)"
+    
+  - index: 7
+    name: midfoot_lateral
+    tier: 2
+    description: "Lateral midfoot outer boundary (old index 8)"
+    
+  - index: 8
+    name: malleolus_medial
+    tier: 1
+    description: "Center of medial malleolus / Inner Ankle Bone (old index 9)"
+    
+  - index: 9
+    name: malleolus_lateral
+    tier: 1
+    description: "Center of lateral malleolus / Outer Ankle Bone (old index 10)"
+    
+  - index: 10
+    name: toe_tip
+    tier: 1
+    description: "Distal tip of 1st / Big Toe (old index 11)"
+    
+  - index: 11
+    name: throat
+    tier: 1
+    description: "Anterior shoe opening throat / lower instep flex point (old index 13)"
+    
+  - index: 12
+    name: achilles
+    tier: 1
+    description: "Achilles tendon insertion onto posterior calcaneus (old index 14)"
+
+flip_indices: [0, 1, 2, 4, 3, 5, 7, 6, 9, 8, 10, 11, 12]
+

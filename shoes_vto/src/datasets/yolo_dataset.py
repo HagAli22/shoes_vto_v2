@@ -31,10 +31,10 @@ def _safe_path(p):
 
 class YOLOFootDataset(Dataset):
     """
-    YOLO format foot dataset with 16 keypoints
+    YOLO format foot dataset with configurable keypoints (16 or 13)
     
     Label format (per line in .txt file):
-    class_id cx cy w h kp0_x kp0_y kp0_v kp1_x kp1_y kp1_v ... kp15_x kp15_y kp15_v
+    class_id cx cy w h kp0_x kp0_y kp0_v kp1_x kp1_y kp1_v ...
     
     Where:
     - class_id: 0=left_foot, 1=right_foot
@@ -51,13 +51,17 @@ class YOLOFootDataset(Dataset):
                  return_original_image=False,
                  augment=False,
                  flip_prob=0.5,
-                 cache_in_memory=True):
+                 cache_in_memory=True,
+                 num_keypoints=None,
+                 flip_idx=None):
         """
         Args:
             images_dir: Path to images directory
             labels_dir: Path to labels directory
             img_size: Target image size (will be resized to img_size × img_size)
             transform: Optional transform to apply
+            num_keypoints: Number of keypoints (e.g. 13 or 16), auto-detected if None
+            flip_idx: Custom keypoint index permutation for horizontal flip
             return_original_image: If True, also return original image (for visualization)
             augment: If True, apply data augmentation (horizontal flip)
             flip_prob: Probability of horizontal flip when augment=True
@@ -71,6 +75,8 @@ class YOLOFootDataset(Dataset):
         self.augment = augment
         self.flip_prob = flip_prob
         self.cache_in_memory = cache_in_memory
+        self.num_keypoints = num_keypoints
+        self.flip_idx = flip_idx
         self.cache = {}
         
         # Get all image files
@@ -192,13 +198,20 @@ class YOLOFootDataset(Dataset):
             
             # Flip and rearrange keypoints
             old_kps = inst['keypoints']
-            new_kps = [[0.0, 0.0, 0] for _ in range(16)]  # Initialize independent sublists
+            num_kp = len(old_kps)
+            new_kps = [[0.0, 0.0, 0] for _ in range(num_kp)]  # Initialize independent sublists
+            
+            if self.flip_idx is not None and len(self.flip_idx) == num_kp:
+                flip_map = {old_i: new_i for old_i, new_i in enumerate(self.flip_idx)}
+            else:
+                flip_map = KEYPOINT_FLIP_MAP
             
             for old_idx, kp in enumerate(old_kps):
                 x, y, v = kp
-                new_idx = KEYPOINT_FLIP_MAP[old_idx]
+                new_idx = flip_map.get(old_idx, old_idx)
                 new_x = 1.0 - x if v > 0 else 0.0  # Only flip if visible
-                new_kps[new_idx] = [new_x, y, v]
+                if new_idx < num_kp:
+                    new_kps[new_idx] = [new_x, y, v]
             
             flipped.append({
                 'class_id': new_class_id,
@@ -297,10 +310,12 @@ class YOLOFootDataset(Dataset):
             class_id = int(parts[0])
             bbox = [float(parts[1]), float(parts[2]), float(parts[3]), float(parts[4])]
             
-            # Parse keypoints (16 keypoints × 3 = 48 values)
+            # Parse keypoints (dynamically handles 13, 14, or 16 keypoints)
             keypoints = []
             kp_start_idx = 5
-            for i in range(16):
+            raw_kp_count = (len(parts) - 5) // 3
+            num_kps = self.num_keypoints if self.num_keypoints is not None else raw_kp_count
+            for i in range(num_kps):
                 idx = kp_start_idx + i * 3
                 if idx + 2 < len(parts):
                     x = float(parts[idx])
