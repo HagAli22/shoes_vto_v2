@@ -1,10 +1,10 @@
-/content/shoes_vto_v2/shoes_vto
 ================================================================================
-👟 ARShoe M1v2 Fresh Training Pipeline
+👟 ARShoe M1v2 13-Keypoint Fresh Training Pipeline
 ================================================================================
-  Target Dataset Root   : /content/shoes_vto_v2/shoes_vto/dataset/merged_v3_v4
-  Output Directory      : /content/shoes_vto_v2/shoes_vto/outputs/m1v2_training
-  Total Epochs          : 100
+  Target Dataset Root   : /content/shoes_vto_v2/shoes_vto/dataset/merged_v3_v4_13kp
+  PAF Configuration     : /content/shoes_vto_v2/shoes_vto/configs/paf_connections_13kp.yaml
+  Output Directory      : /content/shoes_vto_v2/shoes_vto/outputs/m1v2_13kp_training
+  Total Epochs          : 150
   Learning Rate         : 0.0005 (Cosine decay -> 1e-06)
   Batch Size            : 16
   Workers               : 4
@@ -13,32 +13,34 @@
 ================================================================================
 
 📁 Loading datasets...
-Loaded 1798 images from /content/shoes_vto_v2/shoes_vto/dataset/merged_v3_v4/train/images
-Loaded 222 images from /content/shoes_vto_v2/shoes_vto/dataset/merged_v3_v4/valid/images
+Loaded 1798 images from /content/shoes_vto_v2/shoes_vto/dataset/merged_v3_v4_13kp/train/images
+Loaded 222 images from /content/shoes_vto_v2/shoes_vto/dataset/merged_v3_v4_13kp/valid/images
   Train: 1798 images
   Val  : 222 images
 
-🏗️  Initializing ARShoe M1v2 Architecture...
+🏗️  Initializing ARShoe M1v2 (13-KP) Architecture...
 Downloading: "https://download.pytorch.org/models/mobilenet_v3_small-047dcff4.pth" to /root/.cache/torch/hub/checkpoints/mobilenet_v3_small-047dcff4.pth
-100% 9.83M/9.83M [00:00<00:00, 191MB/s]
-  Total parameters: 902,018
+100% 9.83M/9.83M [00:00<00:00, 105MB/s]
+  Total parameters: 901,953
   Backbone (MobileNetV3): 870,560
   FPN-lite Fusion       : 12,560
-  Heatmap Head (DSConv) : 5,968
-  PAF Head (DSConv)     : 6,878
-  Class Head (Global+DS): 6,052
+  Heatmap Head (DSConv) : 5,773 (13 channels)
+  PAF Head (DSConv)     : 7,008 (32 channels)
+  Class Head (Global+DS): 6,052 (2 channels)
   Budget Utilization    : 69.4% of 1.3M budget
 
 🎯 Initializing Trainer with Differential Learning Rates...
   [GPU] Enabled TF32 & cuDNN benchmark for A100 maximum throughput!
   [GPU] Model compiled with torch.compile() for A100 maximum speed!
+/usr/local/lib/python3.13/dist-packages/torch/utils/data/dataloader.py:424: UserWarning: This DataLoader will create 4 worker processes in total. Our suggested max number of worker in current system is 2, which is smaller than what this DataLoader is going to create. Please be aware that excessive worker creation might get DataLoader running slow or even freeze, lower the worker number to avoid potential slowness/freeze if necessary.
+  self.check_worker_number_rationality()
 /content/shoes_vto_v2/shoes_vto/src/training/trainer_m1.py:145: FutureWarning: `torch.cuda.amp.GradScaler(args...)` is deprecated. Please use `torch.amp.GradScaler('cuda', args...)` instead.
   self.scaler = torch.cuda.amp.GradScaler() if self.use_amp and self.device.type == 'cuda' else None
 
-🚀 Launching Fresh M1v2 Training for 100 epochs...
+🚀 Launching Fresh 13-KP M1v2 Training for 150 epochs...
 
 ================================================================================
-Training ARShoe M1 for 100 epochs
+Training ARShoe M1 for 150 epochs
 Device: cuda
 Mixed Precision (AMP): Enabled
 Train samples: 1798
@@ -47,8 +49,11 @@ Batch size: 16
 Learning rate: 0.0005
 Loss weights: {'heatmap': 4.0, 'paf': 2.0, 'class': 1.5}
 ================================================================================
-Epoch 1:   0% 0/113 [00:00<?, ?it/s]/content/shoes_vto_v2/shoes_vto/src/training/trainer_m1.py:174: FutureWarning: `torch.cuda.amp.autocast(args...)` is deprecated. Please use `torch.amp.autocast('cuda', args...)` instead.
+Epoch 1:   0% 0/113 [00:00<?, ?it/s]/usr/local/lib/python3.13/dist-packages/torch/utils/data/dataloader.py:432: UserWarning: This DataLoader will create 4 worker processes in total. Our suggested max number of worker in current system is 2, which is smaller than what this DataLoader is going to create. Please be aware that excessive worker creation might get DataLoader running slow or even freeze, lower the worker number to avoid potential slowness/freeze if necessary.
+  self.check_worker_number_rationality()
+/content/shoes_vto_v2/shoes_vto/src/training/trainer_m1.py:174: FutureWarning: `torch.cuda.amp.autocast(args...)` is deprecated. Please use `torch.amp.autocast('cuda', args...)` instead.
   with torch.cuda.amp.autocast(enabled=self.use_amp):
+W1012 11:45:31.096000 9714 torch/_inductor/utils.py:1731] [0/0] Not enough SMs to use max_autotune_gemm mode
 /usr/local/lib/python3.13/dist-packages/torch/_inductor/lowering.py:7836: UserWarning: 
 Online softmax is disabled on the fly since Inductor decides to
 split the reduction. Cut an issue to PyTorch if this is an
@@ -56,22 +61,24 @@ important use case and you want to speed it up with online
 softmax.
 
   warnings.warn(
-Epoch 1:   1% 1/113 [00:49<1:33:04, 49.86s/it, loss=11.9972, hm=2.5797, paf=0.3059, cls=0.7111]/content/shoes_vto_v2/shoes_vto/src/training/trainer_m1.py:174: FutureWarning: `torch.cuda.amp.autocast(args...)` is deprecated. Please use `torch.amp.autocast('cuda', args...)` instead.
+Epoch 1:   1% 1/113 [02:31<4:42:10, 151.17s/it, loss=12.5103, hm=2.7153, paf=0.2987, cls=0.7012]/content/shoes_vto_v2/shoes_vto/src/training/trainer_m1.py:174: FutureWarning: `torch.cuda.amp.autocast(args...)` is deprecated. Please use `torch.amp.autocast('cuda', args...)` instead.
   with torch.cuda.amp.autocast(enabled=self.use_amp):
-Epoch 1:  98% 111/113 [00:56<00:00, 17.83it/s, loss=5.9658, hm=1.1163, paf=0.2328, cls=0.6901]/usr/local/lib/python3.13/dist-packages/torch/_inductor/lowering.py:7836: UserWarning: 
+Epoch 1:  99% 112/113 [03:18<00:00,  4.41it/s, loss=6.0968, hm=1.1412, paf=0.2385, cls=0.7034]/usr/local/lib/python3.13/dist-packages/torch/_inductor/lowering.py:7836: UserWarning: 
 Online softmax is disabled on the fly since Inductor decides to
 split the reduction. Cut an issue to PyTorch if this is an
 important use case and you want to speed it up with online
 softmax.
 
   warnings.warn(
-Epoch 1: 100% 113/113 [01:41<00:00,  1.12it/s, loss=6.0956, hm=1.1410, paf=0.2547, cls=0.6815]
+Epoch 1: 100% 113/113 [05:29<00:00,  2.91s/it, loss=5.8762, hm=1.0808, paf=0.2469, cls=0.7061]
 
-Epoch 1 - Train: 8.7034 (HM: 1.7843, PAF: 0.2591, Cls: 0.6987)  LR: 0.000250
+Epoch 1 - Train: 9.0719 (HM: 1.8751, PAF: 0.2589, Cls: 0.7025)  LR: 0.000250
 Epoch 2:   0% 0/113 [00:00<?, ?it/s]/content/shoes_vto_v2/shoes_vto/src/training/trainer_m1.py:174: FutureWarning: `torch.cuda.amp.autocast(args...)` is deprecated. Please use `torch.amp.autocast('cuda', args...)` instead.
   with torch.cuda.amp.autocast(enabled=self.use_amp):
-Epoch 2: 100% 113/113 [00:17<00:00,  6.28it/s, loss=3.2962, hm=0.4573, paf=0.2184, cls=0.6867]
-Validation:   0% 0/14 [00:00<?, ?it/s]/usr/local/lib/python3.13/dist-packages/torch/_inductor/lowering.py:7836: UserWarning: 
+Epoch 2: 100% 113/113 [00:55<00:00,  2.03it/s, loss=3.1620, hm=0.4356, paf=0.1819, cls=0.7038]
+Validation:   0% 0/14 [00:00<?, ?it/s]/usr/local/lib/python3.13/dist-packages/torch/utils/data/dataloader.py:432: UserWarning: This DataLoader will create 4 worker processes in total. Our suggested max number of worker in current system is 2, which is smaller than what this DataLoader is going to create. Please be aware that excessive worker creation might get DataLoader running slow or even freeze, lower the worker number to avoid potential slowness/freeze if necessary.
+  self.check_worker_number_rationality()
+/usr/local/lib/python3.13/dist-packages/torch/_inductor/lowering.py:7836: UserWarning: 
 Online softmax is disabled on the fly since Inductor decides to
 split the reduction. Cut an issue to PyTorch if this is an
 important use case and you want to speed it up with online
@@ -80,518 +87,516 @@ softmax.
   warnings.warn(
                                                
 Epoch 2 Summary:
-  Train - Total: 4.2093, HM: 0.6821, PAF: 0.2182, Cls: 0.6964
-  Val   - Total: 3.2660, HM: 0.4541, PAF: 0.2047, Cls: 0.6934
-  Metrics - Class Acc: 50.77%, PCK@0.2: 44.65%
+  Train - Total: 4.2569, HM: 0.6918, PAF: 0.2222, Cls: 0.6969
+  Val   - Total: 3.3139, HM: 0.4627, PAF: 0.2101, Cls: 0.6953
+  Metrics - Class Acc: 50.80%, PCK@0.2: 49.30%
   LR: 0.000250
-  💾 Saved best model (val_loss: 3.2660)
+  💾 Saved best model (val_loss: 3.3139)
 Epoch 3:   0% 0/113 [00:00<?, ?it/s]/content/shoes_vto_v2/shoes_vto/src/training/trainer_m1.py:174: FutureWarning: `torch.cuda.amp.autocast(args...)` is deprecated. Please use `torch.amp.autocast('cuda', args...)` instead.
   with torch.cuda.amp.autocast(enabled=self.use_amp):
-Epoch 3: 100% 113/113 [00:06<00:00, 16.92it/s, loss=2.7205, hm=0.3194, paf=0.2023, cls=0.6923]
+Epoch 3: 100% 113/113 [00:40<00:00,  2.76it/s, loss=3.0219, hm=0.3962, paf=0.1995, cls=0.6922]
 
-Epoch 3 - Train: 2.8718 (HM: 0.3632, PAF: 0.1903, Cls: 0.6923)  LR: 0.000249
-Epoch 4: 100% 113/113 [00:06<00:00, 17.01it/s, loss=2.2445, hm=0.2373, paf=0.1536, cls=0.6588]
+Epoch 3 - Train: 2.8518 (HM: 0.3537, PAF: 0.1984, Cls: 0.6936)  LR: 0.000250
+Epoch 4: 100% 113/113 [00:36<00:00,  3.09it/s, loss=2.3184, hm=0.2453, paf=0.1506, cls=0.6907]
                                                
 Epoch 4 Summary:
-  Train - Total: 2.4918, HM: 0.2841, PAF: 0.1630, Cls: 0.6862
-  Val   - Total: 2.4028, HM: 0.2700, PAF: 0.1496, Cls: 0.6825
-  Metrics - Class Acc: 55.29%, PCK@0.2: 59.38%
-  LR: 0.000249
-  💾 Saved best model (val_loss: 2.4028)
-Epoch 5: 100% 113/113 [00:06<00:00, 17.06it/s, loss=2.1111, hm=0.2379, paf=0.1236, cls=0.6083]
+  Train - Total: 2.4892, HM: 0.2736, PAF: 0.1803, Cls: 0.6895
+  Val   - Total: 2.4466, HM: 0.2649, PAF: 0.1752, Cls: 0.6913
+  Metrics - Class Acc: 52.30%, PCK@0.2: 63.73%
+  LR: 0.000250
+  💾 Saved best model (val_loss: 2.4466)
+Epoch 5: 100% 113/113 [00:36<00:00,  3.11it/s, loss=2.2641, hm=0.2223, paf=0.1865, cls=0.6679]
 
-Epoch 5 - Train: 2.2819 (HM: 0.2539, PAF: 0.1399, Cls: 0.6577)  LR: 0.000248
-Epoch 6: 100% 113/113 [00:06<00:00, 17.71it/s, loss=1.8005, hm=0.2080, paf=0.1055, cls=0.5051]
+Epoch 5 - Train: 2.2981 (HM: 0.2423, PAF: 0.1635, Cls: 0.6681)  LR: 0.000249
+Epoch 6: 100% 113/113 [00:34<00:00,  3.27it/s, loss=2.6500, hm=0.3156, paf=0.1494, cls=0.7260]
                                                
 Epoch 6 Summary:
-  Train - Total: 2.0743, HM: 0.2396, PAF: 0.1226, Cls: 0.5804
-  Val   - Total: 2.0791, HM: 0.2467, PAF: 0.1183, Cls: 0.5705
-  Metrics - Class Acc: 69.70%, PCK@0.2: 60.92%
-  LR: 0.000248
-  💾 Saved best model (val_loss: 2.0791)
-Epoch 7: 100% 113/113 [00:06<00:00, 17.12it/s, loss=2.1968, hm=0.2962, paf=0.0961, cls=0.5464]
+  Train - Total: 2.1403, HM: 0.2287, PAF: 0.1538, Cls: 0.6120
+  Val   - Total: 2.0993, HM: 0.2341, PAF: 0.1552, Cls: 0.5683
+  Metrics - Class Acc: 68.57%, PCK@0.2: 66.65%
+  LR: 0.000249
+  💾 Saved best model (val_loss: 2.0993)
+Epoch 7: 100% 113/113 [00:33<00:00,  3.34it/s, loss=2.0606, hm=0.2293, paf=0.1604, cls=0.5484]
 
-Epoch 7 - Train: 1.9164 (HM: 0.2303, PAF: 0.1071, Cls: 0.5207)  LR: 0.000247
-Epoch 8: 100% 113/113 [00:06<00:00, 17.54it/s, loss=1.7925, hm=0.2170, paf=0.1194, cls=0.4572]
+Epoch 7 - Train: 2.0054 (HM: 0.2199, PAF: 0.1463, Cls: 0.5556)  LR: 0.000249
+Epoch 8: 100% 113/113 [00:32<00:00,  3.50it/s, loss=1.7849, hm=0.1824, paf=0.1429, cls=0.5130]
                                                
 Epoch 8 Summary:
-  Train - Total: 1.7746, HM: 0.2222, PAF: 0.0976, Cls: 0.4604
-  Val   - Total: 1.8431, HM: 0.2335, PAF: 0.1009, Cls: 0.4715
-  Metrics - Class Acc: 75.92%, PCK@0.2: 65.89%
-  LR: 0.000246
-  💾 Saved best model (val_loss: 1.8431)
-Epoch 9: 100% 113/113 [00:06<00:00, 17.34it/s, loss=1.7590, hm=0.2294, paf=0.1115, cls=0.4122]
+  Train - Total: 1.8556, HM: 0.2139, PAF: 0.1389, Cls: 0.4815
+  Val   - Total: 1.8324, HM: 0.2208, PAF: 0.1360, Cls: 0.4514
+  Metrics - Class Acc: 77.28%, PCK@0.2: 69.77%
+  LR: 0.000248
+  💾 Saved best model (val_loss: 1.8324)
+Epoch 9: 100% 113/113 [00:33<00:00,  3.34it/s, loss=1.9435, hm=0.2075, paf=0.1314, cls=0.5670]
 
-Epoch 9 - Train: 1.6736 (HM: 0.2155, PAF: 0.0912, Cls: 0.4193)  LR: 0.000245
-Epoch 10: 100% 113/113 [00:06<00:00, 17.08it/s, loss=1.4637, hm=0.2018, paf=0.0481, cls=0.3734]
+Epoch 9 - Train: 1.7617 (HM: 0.2089, PAF: 0.1334, Cls: 0.4394)  LR: 0.000248
+Epoch 10: 100% 113/113 [00:31<00:00,  3.55it/s, loss=1.4525, hm=0.2144, paf=0.1051, cls=0.2566]
                                                
 Epoch 10 Summary:
-  Train - Total: 1.5514, HM: 0.2082, PAF: 0.0855, Cls: 0.3652
-  Val   - Total: 1.6785, HM: 0.2212, PAF: 0.0889, Cls: 0.4105
-  Metrics - Class Acc: 79.32%, PCK@0.2: 68.28%
-  LR: 0.000244
-  💾 Saved best model (val_loss: 1.6785)
-Epoch 11: 100% 113/113 [00:06<00:00, 17.11it/s, loss=1.2963, hm=0.1894, paf=0.0764, cls=0.2573]
+  Train - Total: 1.6783, HM: 0.2047, PAF: 0.1293, Cls: 0.4006
+  Val   - Total: 1.7674, HM: 0.2157, PAF: 0.1297, Cls: 0.4301
+  Metrics - Class Acc: 78.09%, PCK@0.2: 69.20%
+  LR: 0.000247
+  💾 Saved best model (val_loss: 1.7674)
+Epoch 11: 100% 113/113 [00:31<00:00,  3.62it/s, loss=2.0283, hm=0.2432, paf=0.1690, cls=0.4785]
 
-Epoch 11 - Train: 1.5013 (HM: 0.2031, PAF: 0.0842, Cls: 0.3471)  LR: 0.000243
-Epoch 12: 100% 113/113 [00:06<00:00, 17.18it/s, loss=1.7770, hm=0.1932, paf=0.0867, cls=0.5540]
+Epoch 11 - Train: 1.5957 (HM: 0.2020, PAF: 0.1249, Cls: 0.3585)  LR: 0.000247
+Epoch 12: 100% 113/113 [00:31<00:00,  3.59it/s, loss=1.3439, hm=0.1936, paf=0.1312, cls=0.2047]
                                                
 Epoch 12 Summary:
-  Train - Total: 1.4187, HM: 0.1975, PAF: 0.0819, Cls: 0.3100
-  Val   - Total: 1.6408, HM: 0.2102, PAF: 0.0887, Cls: 0.4150
-  Metrics - Class Acc: 81.08%, PCK@0.2: 70.70%
-  LR: 0.000241
-  💾 Saved best model (val_loss: 1.6408)
-Epoch 13: 100% 113/113 [00:06<00:00, 17.15it/s, loss=1.9631, hm=0.2191, paf=0.0733, cls=0.6267]
+  Train - Total: 1.5347, HM: 0.1989, PAF: 0.1212, Cls: 0.3310
+  Val   - Total: 1.7006, HM: 0.2130, PAF: 0.1187, Cls: 0.4073
+  Metrics - Class Acc: 79.82%, PCK@0.2: 70.51%
+  LR: 0.000246
+  💾 Saved best model (val_loss: 1.7006)
+Epoch 13: 100% 113/113 [00:30<00:00,  3.68it/s, loss=1.9490, hm=0.1909, paf=0.1687, cls=0.5653]
 
-Epoch 13 - Train: 1.3839 (HM: 0.1945, PAF: 0.0792, Cls: 0.2984)  LR: 0.000240
-Epoch 14: 100% 113/113 [00:06<00:00, 17.19it/s, loss=1.1792, hm=0.1687, paf=0.1085, cls=0.1917]
+Epoch 13 - Train: 1.5009 (HM: 0.1986, PAF: 0.1202, Cls: 0.3106)  LR: 0.000245
+Epoch 14: 100% 113/113 [00:30<00:00,  3.71it/s, loss=1.4013, hm=0.1890, paf=0.1154, cls=0.2763]
                                                
 Epoch 14 Summary:
-  Train - Total: 1.3152, HM: 0.1898, PAF: 0.0769, Cls: 0.2681
-  Val   - Total: 1.6135, HM: 0.2034, PAF: 0.0856, Cls: 0.4190
-  Metrics - Class Acc: 80.98%, PCK@0.2: 72.15%
-  LR: 0.000238
-  💾 Saved best model (val_loss: 1.6135)
-Epoch 15: 100% 113/113 [00:06<00:00, 17.38it/s, loss=1.4870, hm=0.1977, paf=0.1058, cls=0.3231]
+  Train - Total: 1.4586, HM: 0.1951, PAF: 0.1169, Cls: 0.2964
+  Val   - Total: 1.6881, HM: 0.2097, PAF: 0.1176, Cls: 0.4094
+  Metrics - Class Acc: 81.65%, PCK@0.2: 71.94%
+  LR: 0.000245
+  💾 Saved best model (val_loss: 1.6881)
+Epoch 15: 100% 113/113 [00:30<00:00,  3.71it/s, loss=1.5463, hm=0.2242, paf=0.1513, cls=0.2313]
 
-Epoch 15 - Train: 1.2647 (HM: 0.1855, PAF: 0.0740, Cls: 0.2498)  LR: 0.000236
-Epoch 16: 100% 113/113 [00:06<00:00, 16.84it/s, loss=1.3366, hm=0.1759, paf=0.0751, cls=0.3218]
+Epoch 15 - Train: 1.3906 (HM: 0.1925, PAF: 0.1157, Cls: 0.2593)  LR: 0.000244
+Epoch 16: 100% 113/113 [00:31<00:00,  3.63it/s, loss=1.9161, hm=0.2820, paf=0.1087, cls=0.3804]
                                                
 Epoch 16 Summary:
-  Train - Total: 1.2387, HM: 0.1845, PAF: 0.0729, Cls: 0.2366
-  Val   - Total: 1.5719, HM: 0.1972, PAF: 0.0781, Cls: 0.4178
-  Metrics - Class Acc: 82.50%, PCK@0.2: 73.16%
-  LR: 0.000235
-  💾 Saved best model (val_loss: 1.5719)
-Epoch 17: 100% 113/113 [00:06<00:00, 17.08it/s, loss=1.8426, hm=0.2355, paf=0.1141, cls=0.4482]
+  Train - Total: 1.3399, HM: 0.1899, PAF: 0.1109, Cls: 0.2390
+  Val   - Total: 1.6406, HM: 0.2043, PAF: 0.1132, Cls: 0.3980
+  Metrics - Class Acc: 82.70%, PCK@0.2: 73.29%
+  LR: 0.000243
+  💾 Saved best model (val_loss: 1.6406)
+Epoch 17: 100% 113/113 [00:30<00:00,  3.73it/s, loss=1.4572, hm=0.2179, paf=0.0964, cls=0.2620]
 
-Epoch 17 - Train: 1.1778 (HM: 0.1805, PAF: 0.0706, Cls: 0.2098)  LR: 0.000233
-Epoch 18: 100% 113/113 [00:06<00:00, 17.21it/s, loss=2.4276, hm=0.1815, paf=0.0912, cls=1.0128]
+Epoch 17 - Train: 1.3251 (HM: 0.1883, PAF: 0.1107, Cls: 0.2337)  LR: 0.000242
+Epoch 18: 100% 113/113 [00:29<00:00,  3.77it/s, loss=1.4155, hm=0.2235, paf=0.1286, cls=0.1762]
                                                
 Epoch 18 Summary:
-  Train - Total: 1.1686, HM: 0.1777, PAF: 0.0687, Cls: 0.2135
-  Val   - Total: 1.5943, HM: 0.1953, PAF: 0.0755, Cls: 0.4414
-  Metrics - Class Acc: 83.44%, PCK@0.2: 73.98%
-  LR: 0.000231
-Epoch 19: 100% 113/113 [00:06<00:00, 17.42it/s, loss=2.2345, hm=0.2156, paf=0.1109, cls=0.7669]
+  Train - Total: 1.2804, HM: 0.1868, PAF: 0.1075, Cls: 0.2121
+  Val   - Total: 1.6080, HM: 0.1997, PAF: 0.1079, Cls: 0.3956
+  Metrics - Class Acc: 84.15%, PCK@0.2: 73.32%
+  LR: 0.000241
+  💾 Saved best model (val_loss: 1.6080)
+Epoch 19: 100% 113/113 [00:30<00:00,  3.69it/s, loss=1.6344, hm=0.1895, paf=0.0898, cls=0.4646]
 
-Epoch 19 - Train: 1.1534 (HM: 0.1771, PAF: 0.0679, Cls: 0.2062)  LR: 0.000228
-Epoch 20: 100% 113/113 [00:06<00:00, 17.54it/s, loss=0.9555, hm=0.1475, paf=0.0661, cls=0.1555]
+Epoch 19 - Train: 1.2644 (HM: 0.1850, PAF: 0.1062, Cls: 0.2081)  LR: 0.000240
+Epoch 20: 100% 113/113 [00:31<00:00,  3.64it/s, loss=1.4288, hm=0.1996, paf=0.1084, cls=0.2759]
                                                
 Epoch 20 Summary:
-  Train - Total: 1.1169, HM: 0.1744, PAF: 0.0659, Cls: 0.1916
-  Val   - Total: 1.5394, HM: 0.1892, PAF: 0.0731, Cls: 0.4243
-  Metrics - Class Acc: 84.54%, PCK@0.2: 74.66%
-  LR: 0.000226
-  💾 Saved best model (val_loss: 1.5394)
-Epoch 21: 100% 113/113 [00:06<00:00, 17.41it/s, loss=1.0863, hm=0.1655, paf=0.0479, cls=0.2190]
+  Train - Total: 1.2411, HM: 0.1838, PAF: 0.1039, Cls: 0.1986
+  Val   - Total: 1.6149, HM: 0.2009, PAF: 0.1050, Cls: 0.4010
+  Metrics - Class Acc: 84.35%, PCK@0.2: 73.60%
+  LR: 0.000239
+Epoch 21: 100% 113/113 [00:29<00:00,  3.77it/s, loss=0.9606, hm=0.1420, paf=0.1056, cls=0.1210]
 
-Epoch 21 - Train: 1.0662 (HM: 0.1701, PAF: 0.0644, Cls: 0.1714)  LR: 0.000224
-Epoch 22: 100% 113/113 [00:06<00:00, 17.34it/s, loss=1.2940, hm=0.1936, paf=0.1030, cls=0.2092]
+Epoch 21 - Train: 1.2101 (HM: 0.1822, PAF: 0.1032, Cls: 0.1834)  LR: 0.000238
+Epoch 22: 100% 113/113 [00:30<00:00,  3.68it/s, loss=1.2963, hm=0.1792, paf=0.0944, cls=0.2604]
                                                
 Epoch 22 Summary:
-  Train - Total: 1.0709, HM: 0.1700, PAF: 0.0654, Cls: 0.1734
-  Val   - Total: 1.5032, HM: 0.1855, PAF: 0.0745, Cls: 0.4080
-  Metrics - Class Acc: 84.79%, PCK@0.2: 75.65%
-  LR: 0.000221
-  💾 Saved best model (val_loss: 1.5032)
-Epoch 23: 100% 113/113 [00:06<00:00, 17.49it/s, loss=1.4448, hm=0.1869, paf=0.1284, cls=0.2937]
+  Train - Total: 1.2044, HM: 0.1795, PAF: 0.1007, Cls: 0.1900
+  Val   - Total: 1.5859, HM: 0.1975, PAF: 0.1069, Cls: 0.3881
+  Metrics - Class Acc: 84.34%, PCK@0.2: 73.63%
+  LR: 0.000237
+  💾 Saved best model (val_loss: 1.5859)
+Epoch 23: 100% 113/113 [00:30<00:00,  3.68it/s, loss=0.8425, hm=0.1278, paf=0.1161, cls=0.0661]
 
-Epoch 23 - Train: 1.0316 (HM: 0.1674, PAF: 0.0623, Cls: 0.1582)  LR: 0.000219
-Epoch 24: 100% 113/113 [00:06<00:00, 17.52it/s, loss=1.1104, hm=0.1422, paf=0.0700, cls=0.2678]
+Epoch 23 - Train: 1.1668 (HM: 0.1778, PAF: 0.1009, Cls: 0.1693)  LR: 0.000236
+Epoch 24: 100% 113/113 [00:30<00:00,  3.68it/s, loss=1.2552, hm=0.1811, paf=0.0972, cls=0.2241]
                                                
 Epoch 24 Summary:
-  Train - Total: 1.0441, HM: 0.1655, PAF: 0.0620, Cls: 0.1722
-  Val   - Total: 1.4566, HM: 0.1836, PAF: 0.0686, Cls: 0.3901
-  Metrics - Class Acc: 86.52%, PCK@0.2: 76.85%
-  LR: 0.000216
-  💾 Saved best model (val_loss: 1.4566)
-Epoch 25: 100% 113/113 [00:06<00:00, 17.50it/s, loss=1.3386, hm=0.1725, paf=0.0648, cls=0.3460]
+  Train - Total: 1.1618, HM: 0.1775, PAF: 0.0974, Cls: 0.1714
+  Val   - Total: 1.5622, HM: 0.1934, PAF: 0.0994, Cls: 0.3933
+  Metrics - Class Acc: 85.03%, PCK@0.2: 75.26%
+  LR: 0.000235
+  💾 Saved best model (val_loss: 1.5622)
+Epoch 25: 100% 113/113 [00:30<00:00,  3.75it/s, loss=1.5757, hm=0.2474, paf=0.1070, cls=0.2481]
 
-Epoch 25 - Train: 1.0082 (HM: 0.1646, PAF: 0.0600, Cls: 0.1532)  LR: 0.000214
-Epoch 26: 100% 113/113 [00:06<00:00, 17.24it/s, loss=1.0460, hm=0.1521, paf=0.0523, cls=0.2219]
+Epoch 25 - Train: 1.1491 (HM: 0.1768, PAF: 0.0972, Cls: 0.1651)  LR: 0.000233
+Epoch 26: 100% 113/113 [00:30<00:00,  3.76it/s, loss=2.0360, hm=0.2693, paf=0.0931, cls=0.5151]
                                                
 Epoch 26 Summary:
-  Train - Total: 0.9862, HM: 0.1621, PAF: 0.0595, Cls: 0.1460
-  Val   - Total: 1.4381, HM: 0.1797, PAF: 0.0670, Cls: 0.3902
-  Metrics - Class Acc: 85.92%, PCK@0.2: 77.34%
-  LR: 0.000211
-  💾 Saved best model (val_loss: 1.4381)
-Epoch 27: 100% 113/113 [00:06<00:00, 17.43it/s, loss=1.0529, hm=0.1459, paf=0.0607, cls=0.2318]
+  Train - Total: 1.1127, HM: 0.1741, PAF: 0.0957, Cls: 0.1498
+  Val   - Total: 1.5459, HM: 0.1902, PAF: 0.0982, Cls: 0.3925
+  Metrics - Class Acc: 85.09%, PCK@0.2: 75.87%
+  LR: 0.000232
+  💾 Saved best model (val_loss: 1.5459)
+Epoch 27: 100% 113/113 [00:30<00:00,  3.76it/s, loss=1.1939, hm=0.1789, paf=0.1257, cls=0.1515]
 
-Epoch 27 - Train: 0.9702 (HM: 0.1600, PAF: 0.0582, Cls: 0.1424)  LR: 0.000208
-Epoch 28: 100% 113/113 [00:06<00:00, 17.19it/s, loss=1.1549, hm=0.1938, paf=0.0834, cls=0.1419]
+Epoch 27 - Train: 1.1179 (HM: 0.1739, PAF: 0.0947, Cls: 0.1553)  LR: 0.000231
+Epoch 28: 100% 113/113 [00:30<00:00,  3.72it/s, loss=0.9330, hm=0.1480, paf=0.0818, cls=0.1184]
                                                
 Epoch 28 Summary:
-  Train - Total: 0.9585, HM: 0.1595, PAF: 0.0587, Cls: 0.1355
-  Val   - Total: 1.5149, HM: 0.1799, PAF: 0.0666, Cls: 0.4412
-  Metrics - Class Acc: 85.41%, PCK@0.2: 76.71%
-  LR: 0.000205
-Epoch 29: 100% 113/113 [00:06<00:00, 17.33it/s, loss=1.2728, hm=0.1533, paf=0.0689, cls=0.3477]
+  Train - Total: 1.0885, HM: 0.1714, PAF: 0.0918, Cls: 0.1463
+  Val   - Total: 1.5965, HM: 0.1899, PAF: 0.0946, Cls: 0.4317
+  Metrics - Class Acc: 84.80%, PCK@0.2: 76.21%
+  LR: 0.000229
+Epoch 29: 100% 113/113 [00:30<00:00,  3.74it/s, loss=1.1420, hm=0.1678, paf=0.0897, cls=0.1943]
 
-Epoch 29 - Train: 0.9357 (HM: 0.1563, PAF: 0.0566, Cls: 0.1315)  LR: 0.000202
-Epoch 30: 100% 113/113 [00:06<00:00, 17.38it/s, loss=1.1361, hm=0.1515, paf=0.0807, cls=0.2458]
+Epoch 29 - Train: 1.0611 (HM: 0.1691, PAF: 0.0902, Cls: 0.1362)  LR: 0.000228
+Epoch 30: 100% 113/113 [00:30<00:00,  3.74it/s, loss=1.5119, hm=0.2189, paf=0.1244, cls=0.2584]
                                                
 Epoch 30 Summary:
-  Train - Total: 0.9126, HM: 0.1549, PAF: 0.0561, Cls: 0.1204
-  Val   - Total: 1.4692, HM: 0.1754, PAF: 0.0640, Cls: 0.4264
-  Metrics - Class Acc: 86.24%, PCK@0.2: 77.43%
-  LR: 0.000199
-Epoch 31: 100% 113/113 [00:06<00:00, 17.51it/s, loss=0.8333, hm=0.1559, paf=0.0621, cls=0.0570]
+  Train - Total: 1.0655, HM: 0.1696, PAF: 0.0894, Cls: 0.1390
+  Val   - Total: 1.6494, HM: 0.1863, PAF: 0.0937, Cls: 0.4780
+  Metrics - Class Acc: 85.09%, PCK@0.2: 76.41%
+  LR: 0.000226
+Epoch 31: 100% 113/113 [00:29<00:00,  3.79it/s, loss=1.2380, hm=0.1733, paf=0.1343, cls=0.1841]
 
-Epoch 31 - Train: 0.9162 (HM: 0.1552, PAF: 0.0563, Cls: 0.1220)  LR: 0.000195
-Epoch 32: 100% 113/113 [00:06<00:00, 17.43it/s, loss=0.8284, hm=0.1347, paf=0.0530, cls=0.1224]
+Epoch 31 - Train: 1.0421 (HM: 0.1671, PAF: 0.0887, Cls: 0.1307)  LR: 0.000225
+Epoch 32: 100% 113/113 [00:30<00:00,  3.76it/s, loss=1.1583, hm=0.1560, paf=0.0664, cls=0.2677]
                                                
 Epoch 32 Summary:
-  Train - Total: 0.9091, HM: 0.1534, PAF: 0.0555, Cls: 0.1230
-  Val   - Total: 1.5193, HM: 0.1746, PAF: 0.0656, Cls: 0.4599
-  Metrics - Class Acc: 85.46%, PCK@0.2: 78.11%
-  LR: 0.000192
-Epoch 33: 100% 113/113 [00:06<00:00, 17.32it/s, loss=0.7276, hm=0.1342, paf=0.0477, cls=0.0636]
+  Train - Total: 1.0232, HM: 0.1656, PAF: 0.0860, Cls: 0.1259
+  Val   - Total: 1.6026, HM: 0.1837, PAF: 0.0911, Cls: 0.4572
+  Metrics - Class Acc: 84.62%, PCK@0.2: 76.52%
+  LR: 0.000223
+Epoch 33: 100% 113/113 [00:30<00:00,  3.76it/s, loss=0.9453, hm=0.1576, paf=0.0902, cls=0.0897]
 
-Epoch 33 - Train: 0.8929 (HM: 0.1520, PAF: 0.0543, Cls: 0.1175)  LR: 0.000189
-Epoch 34: 100% 113/113 [00:06<00:00, 17.50it/s, loss=1.3084, hm=0.2173, paf=0.0892, cls=0.1738]
+Epoch 33 - Train: 1.0116 (HM: 0.1646, PAF: 0.0866, Cls: 0.1201)  LR: 0.000221
+Epoch 34: 100% 113/113 [00:30<00:00,  3.71it/s, loss=0.9786, hm=0.1735, paf=0.0989, cls=0.0578]
                                                
 Epoch 34 Summary:
-  Train - Total: 0.8759, HM: 0.1512, PAF: 0.0528, Cls: 0.1105
-  Val   - Total: 1.5040, HM: 0.1707, PAF: 0.0659, Cls: 0.4595
-  Metrics - Class Acc: 85.51%, PCK@0.2: 78.71%
-  LR: 0.000185
-Epoch 35: 100% 113/113 [00:06<00:00, 17.74it/s, loss=1.3690, hm=0.1586, paf=0.0493, cls=0.4241]
+  Train - Total: 1.0007, HM: 0.1630, PAF: 0.0837, Cls: 0.1210
+  Val   - Total: 1.5781, HM: 0.1828, PAF: 0.0869, Cls: 0.4488
+  Metrics - Class Acc: 85.10%, PCK@0.2: 77.56%
+  LR: 0.000220
+Epoch 35: 100% 113/113 [00:30<00:00,  3.73it/s, loss=1.4401, hm=0.2364, paf=0.1010, cls=0.1949]
 
-Epoch 35 - Train: 0.8852 (HM: 0.1508, PAF: 0.0526, Cls: 0.1179)  LR: 0.000182
-Epoch 36: 100% 113/113 [00:06<00:00, 17.78it/s, loss=1.0358, hm=0.1853, paf=0.0371, cls=0.1469]
+Epoch 35 - Train: 0.9805 (HM: 0.1617, PAF: 0.0830, Cls: 0.1119)  LR: 0.000218
+Epoch 36: 100% 113/113 [00:29<00:00,  3.77it/s, loss=1.4208, hm=0.1975, paf=0.0991, cls=0.2884]
                                                
 Epoch 36 Summary:
-  Train - Total: 0.8733, HM: 0.1492, PAF: 0.0525, Cls: 0.1143
-  Val   - Total: 1.4701, HM: 0.1700, PAF: 0.0629, Cls: 0.4429
-  Metrics - Class Acc: 85.74%, PCK@0.2: 79.15%
-  LR: 0.000179
-Epoch 37: 100% 113/113 [00:06<00:00, 17.57it/s, loss=1.0918, hm=0.1486, paf=0.0663, cls=0.2432]
+  Train - Total: 0.9792, HM: 0.1603, PAF: 0.0812, Cls: 0.1170
+  Val   - Total: 1.5784, HM: 0.1797, PAF: 0.0891, Cls: 0.4542
+  Metrics - Class Acc: 84.86%, PCK@0.2: 77.58%
+  LR: 0.000216
+Epoch 37: 100% 113/113 [00:30<00:00,  3.73it/s, loss=1.0338, hm=0.1885, paf=0.0937, cls=0.0617]
 
-Epoch 37 - Train: 0.8508 (HM: 0.1471, PAF: 0.0513, Cls: 0.1064)  LR: 0.000175
-Epoch 38: 100% 113/113 [00:06<00:00, 17.54it/s, loss=1.0987, hm=0.1914, paf=0.0883, cls=0.1045]
+Epoch 37 - Train: 0.9760 (HM: 0.1589, PAF: 0.0813, Cls: 0.1186)  LR: 0.000214
+Epoch 38: 100% 113/113 [00:30<00:00,  3.71it/s, loss=1.2374, hm=0.1789, paf=0.0931, cls=0.2237]
                                                
 Epoch 38 Summary:
-  Train - Total: 0.8443, HM: 0.1458, PAF: 0.0510, Cls: 0.1063
-  Val   - Total: 1.4703, HM: 0.1679, PAF: 0.0617, Cls: 0.4500
-  Metrics - Class Acc: 85.60%, PCK@0.2: 79.46%
-  LR: 0.000171
-Epoch 39: 100% 113/113 [00:06<00:00, 17.43it/s, loss=1.4302, hm=0.2054, paf=0.0851, cls=0.2925]
+  Train - Total: 0.9674, HM: 0.1578, PAF: 0.0801, Cls: 0.1173
+  Val   - Total: 1.6089, HM: 0.1773, PAF: 0.0862, Cls: 0.4847
+  Metrics - Class Acc: 85.15%, PCK@0.2: 78.30%
+  LR: 0.000213
+Epoch 39: 100% 113/113 [00:30<00:00,  3.71it/s, loss=0.7192, hm=0.1273, paf=0.0707, cls=0.0458]
 
-Epoch 39 - Train: 0.8420 (HM: 0.1459, PAF: 0.0517, Cls: 0.1035)  LR: 0.000168
-Epoch 40: 100% 113/113 [00:06<00:00, 17.26it/s, loss=0.8161, hm=0.1594, paf=0.0447, cls=0.0594]
+Epoch 39 - Train: 0.9368 (HM: 0.1561, PAF: 0.0782, Cls: 0.1039)  LR: 0.000211
+Epoch 40: 100% 113/113 [00:30<00:00,  3.72it/s, loss=0.8674, hm=0.1357, paf=0.0912, cls=0.0949]
                                                
 Epoch 40 Summary:
-  Train - Total: 0.8252, HM: 0.1440, PAF: 0.0498, Cls: 0.0998
-  Val   - Total: 1.5105, HM: 0.1692, PAF: 0.0625, Cls: 0.4724
-  Metrics - Class Acc: 85.98%, PCK@0.2: 79.02%
-  LR: 0.000164
-Epoch 41: 100% 113/113 [00:06<00:00, 17.33it/s, loss=1.0051, hm=0.1478, paf=0.0448, cls=0.2162]
+  Train - Total: 0.9313, HM: 0.1546, PAF: 0.0769, Cls: 0.1061
+  Val   - Total: 1.5529, HM: 0.1769, PAF: 0.0853, Cls: 0.4497
+  Metrics - Class Acc: 86.46%, PCK@0.2: 78.04%
+  LR: 0.000209
+Epoch 41: 100% 113/113 [00:30<00:00,  3.76it/s, loss=0.7765, hm=0.1268, paf=0.0803, cls=0.0724]
 
-Epoch 41 - Train: 0.8268 (HM: 0.1433, PAF: 0.0504, Cls: 0.1020)  LR: 0.000160
-Epoch 42: 100% 113/113 [00:06<00:00, 17.56it/s, loss=1.0546, hm=0.1384, paf=0.0645, cls=0.2479]
-                                               
+Epoch 41 - Train: 0.9170 (HM: 0.1534, PAF: 0.0758, Cls: 0.1012)  LR: 0.000207
+Epoch 42: 100% 113/113 [00:30<00:00,  3.71it/s, loss=0.9457, hm=0.1534, paf=0.1085, cls=0.0766]
+
 Epoch 42 Summary:
-  Train - Total: 0.8245, HM: 0.1426, PAF: 0.0493, Cls: 0.1036
-  Val   - Total: 1.5495, HM: 0.1673, PAF: 0.0608, Cls: 0.5059
-  Metrics - Class Acc: 85.31%, PCK@0.2: 79.87%
-  LR: 0.000156
-Epoch 43: 100% 113/113 [00:06<00:00, 17.55it/s, loss=1.0328, hm=0.1536, paf=0.1013, cls=0.1438]
+  Train - Total: 0.9072, HM: 0.1526, PAF: 0.0757, Cls: 0.0969
+  Val   - Total: 1.6114, HM: 0.1747, PAF: 0.0830, Cls: 0.4977
+  Metrics - Class Acc: 84.96%, PCK@0.2: 78.41%
+  LR: 0.000205
+Epoch 43: 100% 113/113 [00:30<00:00,  3.73it/s, loss=1.0231, hm=0.1596, paf=0.0669, cls=0.1673]
 
-Epoch 43 - Train: 0.8143 (HM: 0.1413, PAF: 0.0494, Cls: 0.1000)  LR: 0.000153
-Epoch 44: 100% 113/113 [00:06<00:00, 17.32it/s, loss=0.8202, hm=0.1388, paf=0.0731, cls=0.0792]
+Epoch 43 - Train: 0.9067 (HM: 0.1511, PAF: 0.0737, Cls: 0.1031)  LR: 0.000203
+Epoch 44: 100% 113/113 [00:30<00:00,  3.74it/s, loss=1.0951, hm=0.1941, paf=0.0850, cls=0.0993]
                                                
 Epoch 44 Summary:
-  Train - Total: 0.7969, HM: 0.1402, PAF: 0.0495, Cls: 0.0914
-  Val   - Total: 1.5440, HM: 0.1657, PAF: 0.0623, Cls: 0.5044
-  Metrics - Class Acc: 86.46%, PCK@0.2: 79.41%
-  LR: 0.000149
-Epoch 45: 100% 113/113 [00:06<00:00, 17.70it/s, loss=1.2935, hm=0.1870, paf=0.0842, cls=0.2513]
+  Train - Total: 0.9031, HM: 0.1505, PAF: 0.0734, Cls: 0.1028
+  Val   - Total: 1.6548, HM: 0.1739, PAF: 0.0849, Cls: 0.5264
+  Metrics - Class Acc: 84.59%, PCK@0.2: 79.42%
+  LR: 0.000201
+Epoch 45: 100% 113/113 [00:30<00:00,  3.76it/s, loss=1.6059, hm=0.2144, paf=0.1026, cls=0.3621]
 
-Epoch 45 - Train: 0.8024 (HM: 0.1399, PAF: 0.0489, Cls: 0.0966)  LR: 0.000145
-Epoch 46: 100% 113/113 [00:06<00:00, 17.77it/s, loss=0.9059, hm=0.1516, paf=0.0683, cls=0.1085]
+Epoch 45 - Train: 0.9009 (HM: 0.1502, PAF: 0.0726, Cls: 0.1032)  LR: 0.000199
+Epoch 46: 100% 113/113 [00:29<00:00,  3.79it/s, loss=1.1342, hm=0.2117, paf=0.1038, cls=0.0531]
                                                
 Epoch 46 Summary:
-  Train - Total: 0.7992, HM: 0.1396, PAF: 0.0480, Cls: 0.0965
-  Val   - Total: 1.5150, HM: 0.1660, PAF: 0.0612, Cls: 0.4856
-  Metrics - Class Acc: 85.89%, PCK@0.2: 79.53%
-  LR: 0.000141
-Epoch 47: 100% 113/113 [00:06<00:00, 17.75it/s, loss=0.8590, hm=0.1587, paf=0.0428, cls=0.0925]
+  Train - Total: 0.8796, HM: 0.1489, PAF: 0.0722, Cls: 0.0931
+  Val   - Total: 1.5894, HM: 0.1720, PAF: 0.0797, Cls: 0.4946
+  Metrics - Class Acc: 85.41%, PCK@0.2: 79.76%
+  LR: 0.000197
+Epoch 47: 100% 113/113 [00:29<00:00,  3.79it/s, loss=1.2363, hm=0.1612, paf=0.0979, cls=0.2639]
 
-Epoch 47 - Train: 0.7765 (HM: 0.1374, PAF: 0.0468, Cls: 0.0888)  LR: 0.000137
-Epoch 48: 100% 113/113 [00:06<00:00, 17.73it/s, loss=1.2460, hm=0.1358, paf=0.0630, cls=0.3844]
+Epoch 47 - Train: 0.8638 (HM: 0.1475, PAF: 0.0699, Cls: 0.0892)  LR: 0.000194
+Epoch 48: 100% 113/113 [00:29<00:00,  3.79it/s, loss=0.8692, hm=0.1347, paf=0.0485, cls=0.1556]
                                                
 Epoch 48 Summary:
-  Train - Total: 0.7797, HM: 0.1372, PAF: 0.0479, Cls: 0.0902
-  Val   - Total: 1.5570, HM: 0.1635, PAF: 0.0618, Cls: 0.5196
-  Metrics - Class Acc: 85.46%, PCK@0.2: 79.70%
-  LR: 0.000133
-Epoch 49: 100% 113/113 [00:06<00:00, 17.67it/s, loss=0.8996, hm=0.1836, paf=0.0526, cls=0.0399]
+  Train - Total: 0.8624, HM: 0.1459, PAF: 0.0700, Cls: 0.0925
+  Val   - Total: 1.5420, HM: 0.1673, PAF: 0.0806, Cls: 0.4745
+  Metrics - Class Acc: 85.58%, PCK@0.2: 80.16%
+  LR: 0.000192
+  💾 Saved best model (val_loss: 1.5420)
+Epoch 49: 100% 113/113 [00:30<00:00,  3.75it/s, loss=0.8848, hm=0.1599, paf=0.0556, cls=0.0892]
 
-Epoch 49 - Train: 0.7773 (HM: 0.1371, PAF: 0.0469, Cls: 0.0902)  LR: 0.000129
-Epoch 50: 100% 113/113 [00:06<00:00, 17.06it/s, loss=0.8110, hm=0.1331, paf=0.0492, cls=0.1200]
+Epoch 49 - Train: 0.8569 (HM: 0.1454, PAF: 0.0677, Cls: 0.0931)  LR: 0.000190
+Epoch 50: 100% 113/113 [00:30<00:00,  3.71it/s, loss=0.9421, hm=0.1486, paf=0.0922, cls=0.1090]
                                                
 Epoch 50 Summary:
-  Train - Total: 0.7677, HM: 0.1357, PAF: 0.0461, Cls: 0.0884
-  Val   - Total: 1.4569, HM: 0.1627, PAF: 0.0592, Cls: 0.4584
-  Metrics - Class Acc: 86.34%, PCK@0.2: 79.56%
-  LR: 0.000126
-Epoch 51: 100% 113/113 [00:06<00:00, 17.58it/s, loss=0.9955, hm=0.1915, paf=0.0373, cls=0.1032]
+  Train - Total: 0.8591, HM: 0.1444, PAF: 0.0679, Cls: 0.0972
+  Val   - Total: 1.6830, HM: 0.1714, PAF: 0.0824, Cls: 0.5550
+  Metrics - Class Acc: 84.52%, PCK@0.2: 79.36%
+  LR: 0.000188
+Epoch 51: 100% 113/113 [00:29<00:00,  3.78it/s, loss=0.9199, hm=0.1459, paf=0.0740, cls=0.1256]
 
-Epoch 51 - Train: 0.7597 (HM: 0.1350, PAF: 0.0460, Cls: 0.0852)  LR: 0.000122
-Epoch 52: 100% 113/113 [00:06<00:00, 17.80it/s, loss=0.7336, hm=0.1092, paf=0.0646, cls=0.1117]
+Epoch 51 - Train: 0.8543 (HM: 0.1440, PAF: 0.0670, Cls: 0.0962)  LR: 0.000185
+Epoch 52: 100% 113/113 [00:29<00:00,  3.80it/s, loss=0.9367, hm=0.1433, paf=0.0662, cls=0.1539]
                                                
 Epoch 52 Summary:
-  Train - Total: 0.7567, HM: 0.1345, PAF: 0.0460, Cls: 0.0844
-  Val   - Total: 1.4796, HM: 0.1596, PAF: 0.0587, Cls: 0.4826
-  Metrics - Class Acc: 86.63%, PCK@0.2: 80.06%
-  LR: 0.000118
-Epoch 53: 100% 113/113 [00:06<00:00, 16.96it/s, loss=0.6825, hm=0.1099, paf=0.0452, cls=0.1017]
+  Train - Total: 0.8357, HM: 0.1436, PAF: 0.0663, Cls: 0.0859
+  Val   - Total: 1.5732, HM: 0.1649, PAF: 0.0792, Cls: 0.5033
+  Metrics - Class Acc: 85.36%, PCK@0.2: 80.42%
+  LR: 0.000183
+Epoch 53: 100% 113/113 [00:30<00:00,  3.75it/s, loss=0.9680, hm=0.1453, paf=0.1090, cls=0.1124]
 
-Epoch 53 - Train: 0.7479 (HM: 0.1330, PAF: 0.0457, Cls: 0.0831)  LR: 0.000114
-Epoch 54: 100% 113/113 [00:06<00:00, 16.84it/s, loss=0.6062, hm=0.1132, paf=0.0501, cls=0.0356]
+Epoch 53 - Train: 0.8219 (HM: 0.1413, PAF: 0.0649, Cls: 0.0846)  LR: 0.000181
+Epoch 54: 100% 113/113 [00:30<00:00,  3.68it/s, loss=0.8735, hm=0.1499, paf=0.0634, cls=0.0981]
                                                
 Epoch 54 Summary:
-  Train - Total: 0.7493, HM: 0.1322, PAF: 0.0451, Cls: 0.0868
-  Val   - Total: 1.4800, HM: 0.1607, PAF: 0.0595, Cls: 0.4789
-  Metrics - Class Acc: 86.26%, PCK@0.2: 80.42%
-  LR: 0.000110
-Epoch 55: 100% 113/113 [00:06<00:00, 16.88it/s, loss=0.8885, hm=0.1354, paf=0.0344, cls=0.1856]
+  Train - Total: 0.8231, HM: 0.1414, PAF: 0.0640, Cls: 0.0863
+  Val   - Total: 1.6471, HM: 0.1652, PAF: 0.0780, Cls: 0.5534
+  Metrics - Class Acc: 85.44%, PCK@0.2: 79.99%
+  LR: 0.000179
+Epoch 55: 100% 113/113 [00:30<00:00,  3.72it/s, loss=0.8827, hm=0.1344, paf=0.0946, cls=0.1041]
 
-Epoch 55 - Train: 0.7436 (HM: 0.1317, PAF: 0.0434, Cls: 0.0866)  LR: 0.000106
-Epoch 56: 100% 113/113 [00:06<00:00, 16.88it/s, loss=0.6485, hm=0.1274, paf=0.0603, cls=0.0121]
+Epoch 55 - Train: 0.8029 (HM: 0.1385, PAF: 0.0632, Cls: 0.0817)  LR: 0.000176
+Epoch 56: 100% 113/113 [00:30<00:00,  3.75it/s, loss=0.9322, hm=0.1483, paf=0.0620, cls=0.1433]
                                                
 Epoch 56 Summary:
-  Train - Total: 0.7340, HM: 0.1313, PAF: 0.0439, Cls: 0.0807
-  Val   - Total: 1.4567, HM: 0.1580, PAF: 0.0589, Cls: 0.4713
-  Metrics - Class Acc: 86.27%, PCK@0.2: 80.74%
-  LR: 0.000102
-Epoch 57: 100% 113/113 [00:06<00:00, 17.10it/s, loss=0.6138, hm=0.1122, paf=0.0469, cls=0.0476]
+  Train - Total: 0.8050, HM: 0.1393, PAF: 0.0620, Cls: 0.0824
+  Val   - Total: 1.5876, HM: 0.1633, PAF: 0.0796, Cls: 0.5169
+  Metrics - Class Acc: 85.68%, PCK@0.2: 79.87%
+  LR: 0.000174
+Epoch 57: 100% 113/113 [00:30<00:00,  3.74it/s, loss=0.8460, hm=0.1432, paf=0.0675, cls=0.0920]
 
-Epoch 57 - Train: 0.7313 (HM: 0.1304, PAF: 0.0442, Cls: 0.0810)  LR: 0.000098
-Epoch 58: 100% 113/113 [00:06<00:00, 17.39it/s, loss=0.6763, hm=0.1131, paf=0.0466, cls=0.0871]
+Epoch 57 - Train: 0.8005 (HM: 0.1378, PAF: 0.0618, Cls: 0.0838)  LR: 0.000171
+Epoch 58: 100% 113/113 [00:30<00:00,  3.70it/s, loss=1.0150, hm=0.1853, paf=0.0818, cls=0.0735]
                                                
 Epoch 58 Summary:
-  Train - Total: 0.7238, HM: 0.1295, PAF: 0.0437, Cls: 0.0788
-  Val   - Total: 1.5115, HM: 0.1571, PAF: 0.0575, Cls: 0.5121
-  Metrics - Class Acc: 86.27%, PCK@0.2: 80.74%
-  LR: 0.000095
-Epoch 59: 100% 113/113 [00:06<00:00, 17.62it/s, loss=1.1037, hm=0.1387, paf=0.0660, cls=0.2780]
+  Train - Total: 0.7883, HM: 0.1372, PAF: 0.0607, Cls: 0.0787
+  Val   - Total: 1.5347, HM: 0.1596, PAF: 0.0772, Cls: 0.4946
+  Metrics - Class Acc: 86.12%, PCK@0.2: 80.93%
+  LR: 0.000169
+  💾 Saved best model (val_loss: 1.5347)
+Epoch 59: 100% 113/113 [00:30<00:00,  3.75it/s, loss=1.1592, hm=0.1461, paf=0.0928, cls=0.2594]
 
-Epoch 59 - Train: 0.7181 (HM: 0.1291, PAF: 0.0428, Cls: 0.0773)  LR: 0.000091
-Epoch 60: 100% 113/113 [00:06<00:00, 17.68it/s, loss=1.0897, hm=0.1794, paf=0.0576, cls=0.1713]
+Epoch 59 - Train: 0.7870 (HM: 0.1360, PAF: 0.0602, Cls: 0.0818)  LR: 0.000166
+Epoch 60: 100% 113/113 [00:30<00:00,  3.75it/s, loss=0.7060, hm=0.1211, paf=0.0453, cls=0.0874]
                                                
 Epoch 60 Summary:
-  Train - Total: 0.7136, HM: 0.1292, PAF: 0.0432, Cls: 0.0737
-  Val   - Total: 1.5098, HM: 0.1575, PAF: 0.0588, Cls: 0.5082
-  Metrics - Class Acc: 86.16%, PCK@0.2: 80.30%
-  LR: 0.000087
-Epoch 61: 100% 113/113 [00:06<00:00, 17.56it/s, loss=0.8793, hm=0.1644, paf=0.0421, cls=0.0917]
+  Train - Total: 0.7786, HM: 0.1353, PAF: 0.0598, Cls: 0.0785
+  Val   - Total: 1.5823, HM: 0.1595, PAF: 0.0742, Cls: 0.5305
+  Metrics - Class Acc: 85.94%, PCK@0.2: 81.02%
+  LR: 0.000164
+Epoch 61: 100% 113/113 [00:30<00:00,  3.76it/s, loss=1.0143, hm=0.1633, paf=0.0628, cls=0.1569]
 
-Epoch 61 - Train: 0.7171 (HM: 0.1288, PAF: 0.0429, Cls: 0.0775)  LR: 0.000083
-Epoch 62: 100% 113/113 [00:06<00:00, 17.46it/s, loss=0.8635, hm=0.1477, paf=0.0803, cls=0.0747]
+Epoch 61 - Train: 0.7883 (HM: 0.1360, PAF: 0.0605, Cls: 0.0823)  LR: 0.000161
+Epoch 62: 100% 113/113 [00:30<00:00,  3.70it/s, loss=1.1498, hm=0.1781, paf=0.0817, cls=0.1827]
                                                
 Epoch 62 Summary:
-  Train - Total: 0.7088, HM: 0.1275, PAF: 0.0430, Cls: 0.0751
-  Val   - Total: 1.4922, HM: 0.1572, PAF: 0.0578, Cls: 0.4986
-  Metrics - Class Acc: 86.07%, PCK@0.2: 80.67%
-  LR: 0.000080
-Epoch 63: 100% 113/113 [00:06<00:00, 17.27it/s, loss=1.1358, hm=0.1540, paf=0.0566, cls=0.2710]
+  Train - Total: 0.7724, HM: 0.1340, PAF: 0.0581, Cls: 0.0801
+  Val   - Total: 1.5600, HM: 0.1606, PAF: 0.0737, Cls: 0.5133
+  Metrics - Class Acc: 85.80%, PCK@0.2: 81.22%
+  LR: 0.000159
+Epoch 63: 100% 113/113 [00:29<00:00,  3.77it/s, loss=0.9000, hm=0.1588, paf=0.0682, cls=0.0856]
 
-Epoch 63 - Train: 0.7207 (HM: 0.1278, PAF: 0.0428, Cls: 0.0826)  LR: 0.000076
-Epoch 64: 100% 113/113 [00:06<00:00, 17.42it/s, loss=0.7697, hm=0.1366, paf=0.0339, cls=0.1036]
+Epoch 63 - Train: 0.7692 (HM: 0.1333, PAF: 0.0578, Cls: 0.0803)  LR: 0.000156
+Epoch 64: 100% 113/113 [00:29<00:00,  3.78it/s, loss=0.6870, hm=0.1180, paf=0.0565, cls=0.0679]
                                                
 Epoch 64 Summary:
-  Train - Total: 0.7084, HM: 0.1268, PAF: 0.0427, Cls: 0.0771
-  Val   - Total: 1.5125, HM: 0.1564, PAF: 0.0579, Cls: 0.5141
-  Metrics - Class Acc: 86.86%, PCK@0.2: 81.08%
-  LR: 0.000072
-Epoch 65: 100% 113/113 [00:06<00:00, 17.76it/s, loss=0.8190, hm=0.1648, paf=0.0282, cls=0.0688]
+  Train - Total: 0.7548, HM: 0.1317, PAF: 0.0571, Cls: 0.0759
+  Val   - Total: 1.5550, HM: 0.1581, PAF: 0.0738, Cls: 0.5165
+  Metrics - Class Acc: 86.36%, PCK@0.2: 81.08%
+  LR: 0.000154
+Epoch 65: 100% 113/113 [00:29<00:00,  3.78it/s, loss=0.9609, hm=0.1563, paf=0.0819, cls=0.1146]
 
-Epoch 65 - Train: 0.7043 (HM: 0.1274, PAF: 0.0422, Cls: 0.0735)  LR: 0.000069
-Epoch 66: 100% 113/113 [00:06<00:00, 17.11it/s, loss=0.7404, hm=0.1318, paf=0.0394, cls=0.0896]
+Epoch 65 - Train: 0.7609 (HM: 0.1326, PAF: 0.0569, Cls: 0.0778)  LR: 0.000151
+Epoch 66: 100% 113/113 [00:30<00:00,  3.72it/s, loss=0.7659, hm=0.1445, paf=0.0548, cls=0.0521]
                                                
 Epoch 66 Summary:
-  Train - Total: 0.6945, HM: 0.1260, PAF: 0.0414, Cls: 0.0717
-  Val   - Total: 1.5214, HM: 0.1549, PAF: 0.0582, Cls: 0.5235
-  Metrics - Class Acc: 86.35%, PCK@0.2: 81.34%
-  LR: 0.000066
-Epoch 67: 100% 113/113 [00:06<00:00, 17.02it/s, loss=0.5996, hm=0.0986, paf=0.0453, cls=0.0765]
+  Train - Total: 0.7441, HM: 0.1308, PAF: 0.0555, Cls: 0.0731
+  Val   - Total: 1.5433, HM: 0.1590, PAF: 0.0741, Cls: 0.5061
+  Metrics - Class Acc: 86.35%, PCK@0.2: 81.59%
+  LR: 0.000149
+Epoch 67: 100% 113/113 [00:29<00:00,  3.77it/s, loss=0.7400, hm=0.1273, paf=0.0613, cls=0.0722]
 
-Epoch 67 - Train: 0.6957 (HM: 0.1259, PAF: 0.0421, Cls: 0.0720)  LR: 0.000062
-Epoch 68: 100% 113/113 [00:06<00:00, 17.27it/s, loss=0.7928, hm=0.1475, paf=0.0492, cls=0.0695]
+Epoch 67 - Train: 0.7488 (HM: 0.1303, PAF: 0.0556, Cls: 0.0777)  LR: 0.000146
+Epoch 68: 100% 113/113 [00:29<00:00,  3.79it/s, loss=0.9293, hm=0.1375, paf=0.0840, cls=0.1409]
                                                
 Epoch 68 Summary:
-  Train - Total: 0.6957, HM: 0.1256, PAF: 0.0414, Cls: 0.0737
-  Val   - Total: 1.5072, HM: 0.1548, PAF: 0.0571, Cls: 0.5160
-  Metrics - Class Acc: 86.43%, PCK@0.2: 81.37%
-  LR: 0.000059
-Epoch 69: 100% 113/113 [00:06<00:00, 17.44it/s, loss=0.6066, hm=0.1234, paf=0.0313, cls=0.0336]
+  Train - Total: 0.7366, HM: 0.1293, PAF: 0.0550, Cls: 0.0729
+  Val   - Total: 1.5786, HM: 0.1555, PAF: 0.0747, Cls: 0.5381
+  Metrics - Class Acc: 86.39%, PCK@0.2: 81.79%
+  LR: 0.000144
+Epoch 69: 100% 113/113 [00:29<00:00,  3.79it/s, loss=0.7262, hm=0.1254, paf=0.0503, cls=0.0827]
 
-Epoch 69 - Train: 0.6961 (HM: 0.1262, PAF: 0.0418, Cls: 0.0718)  LR: 0.000056
-Epoch 70: 100% 113/113 [00:06<00:00, 17.60it/s, loss=0.6870, hm=0.1266, paf=0.0347, cls=0.0742]
+Epoch 69 - Train: 0.7393 (HM: 0.1288, PAF: 0.0550, Cls: 0.0761)  LR: 0.000141
+Epoch 70: 100% 113/113 [00:29<00:00,  3.80it/s, loss=1.1003, hm=0.1627, paf=0.0782, cls=0.1955]
                                                
 Epoch 70 Summary:
-  Train - Total: 0.6929, HM: 0.1253, PAF: 0.0413, Cls: 0.0728
-  Val   - Total: 1.5026, HM: 0.1542, PAF: 0.0574, Cls: 0.5140
-  Metrics - Class Acc: 86.57%, PCK@0.2: 81.29%
-  LR: 0.000052
-Epoch 71: 100% 113/113 [00:06<00:00, 17.66it/s, loss=0.9749, hm=0.1582, paf=0.0837, cls=0.1164]
+  Train - Total: 0.7291, HM: 0.1282, PAF: 0.0535, Cls: 0.0728
+  Val   - Total: 1.6180, HM: 0.1568, PAF: 0.0729, Cls: 0.5633
+  Metrics - Class Acc: 85.99%, PCK@0.2: 81.36%
+  LR: 0.000139
+Epoch 71: 100% 113/113 [00:30<00:00,  3.71it/s, loss=0.6646, hm=0.1021, paf=0.0472, cls=0.1079]
 
-Epoch 71 - Train: 0.6898 (HM: 0.1251, PAF: 0.0418, Cls: 0.0706)  LR: 0.000049
-Epoch 72: 100% 113/113 [00:06<00:00, 17.36it/s, loss=0.7447, hm=0.1353, paf=0.0436, cls=0.0775]
+Epoch 71 - Train: 0.7287 (HM: 0.1278, PAF: 0.0536, Cls: 0.0736)  LR: 0.000136
+Epoch 72: 100% 113/113 [00:29<00:00,  3.81it/s, loss=0.5660, hm=0.1005, paf=0.0436, cls=0.0513]
                                                
 Epoch 72 Summary:
-  Train - Total: 0.6868, HM: 0.1241, PAF: 0.0411, Cls: 0.0722
-  Val   - Total: 1.5100, HM: 0.1540, PAF: 0.0572, Cls: 0.5198
-  Metrics - Class Acc: 86.52%, PCK@0.2: 81.51%
-  LR: 0.000046
-Epoch 73: 100% 113/113 [00:06<00:00, 17.00it/s, loss=0.9643, hm=0.1383, paf=0.0709, cls=0.1795]
+  Train - Total: 0.7204, HM: 0.1270, PAF: 0.0526, Cls: 0.0715
+  Val   - Total: 1.6580, HM: 0.1549, PAF: 0.0719, Cls: 0.5964
+  Metrics - Class Acc: 85.93%, PCK@0.2: 81.59%
+  LR: 0.000133
+Epoch 73: 100% 113/113 [00:29<00:00,  3.81it/s, loss=0.9385, hm=0.1401, paf=0.0623, cls=0.1690]
 
-Epoch 73 - Train: 0.6824 (HM: 0.1237, PAF: 0.0409, Cls: 0.0705)  LR: 0.000043
-Epoch 74: 100% 113/113 [00:06<00:00, 17.14it/s, loss=1.0243, hm=0.1714, paf=0.0849, cls=0.1126]
+Epoch 73 - Train: 0.7183 (HM: 0.1259, PAF: 0.0523, Cls: 0.0734)  LR: 0.000131
+Epoch 74: 100% 113/113 [00:29<00:00,  3.80it/s, loss=0.6858, hm=0.1188, paf=0.0549, cls=0.0672]
                                                
 Epoch 74 Summary:
-  Train - Total: 0.6813, HM: 0.1235, PAF: 0.0406, Cls: 0.0706
-  Val   - Total: 1.4967, HM: 0.1536, PAF: 0.0562, Cls: 0.5133
-  Metrics - Class Acc: 86.75%, PCK@0.2: 81.46%
-  LR: 0.000040
-Epoch 75: 100% 113/113 [00:06<00:00, 17.19it/s, loss=0.8669, hm=0.1696, paf=0.0575, cls=0.0490]
+  Train - Total: 0.7130, HM: 0.1261, PAF: 0.0519, Cls: 0.0699
+  Val   - Total: 1.5718, HM: 0.1535, PAF: 0.0713, Cls: 0.5435
+  Metrics - Class Acc: 86.10%, PCK@0.2: 81.31%
+  LR: 0.000128
+Epoch 75: 100% 113/113 [00:29<00:00,  3.77it/s, loss=0.6295, hm=0.1109, paf=0.0505, cls=0.0567]
 
-Epoch 75 - Train: 0.6808 (HM: 0.1232, PAF: 0.0415, Cls: 0.0700)  LR: 0.000037
-Epoch 76: 100% 113/113 [00:06<00:00, 17.59it/s, loss=0.7811, hm=0.1226, paf=0.0483, cls=0.1295]
+Epoch 75 - Train: 0.7015 (HM: 0.1244, PAF: 0.0508, Cls: 0.0682)  LR: 0.000126
+Epoch 76: 100% 113/113 [00:30<00:00,  3.73it/s, loss=1.1333, hm=0.1582, paf=0.1023, cls=0.1972]
                                                
 Epoch 76 Summary:
-  Train - Total: 0.6758, HM: 0.1227, PAF: 0.0405, Cls: 0.0693
-  Val   - Total: 1.5094, HM: 0.1530, PAF: 0.0557, Cls: 0.5240
-  Metrics - Class Acc: 86.61%, PCK@0.2: 81.58%
-  LR: 0.000035
-Epoch 77: 100% 113/113 [00:06<00:00, 17.54it/s, loss=0.7936, hm=0.1435, paf=0.0604, cls=0.0657]
+  Train - Total: 0.7011, HM: 0.1242, PAF: 0.0509, Cls: 0.0683
+  Val   - Total: 1.5740, HM: 0.1528, PAF: 0.0718, Cls: 0.5461
+  Metrics - Class Acc: 86.06%, PCK@0.2: 81.76%
+  LR: 0.000123
+Epoch 77: 100% 113/113 [00:29<00:00,  3.82it/s, loss=0.8840, hm=0.1639, paf=0.0556, cls=0.0782]
 
-Epoch 77 - Train: 0.6686 (HM: 0.1220, PAF: 0.0406, Cls: 0.0663)  LR: 0.000032
-Epoch 78: 100% 113/113 [00:06<00:00, 17.44it/s, loss=0.7874, hm=0.1414, paf=0.0669, cls=0.0587]
+Epoch 77 - Train: 0.7006 (HM: 0.1236, PAF: 0.0503, Cls: 0.0703)  LR: 0.000120
+Epoch 78: 100% 113/113 [00:29<00:00,  3.80it/s, loss=0.6221, hm=0.1157, paf=0.0582, cls=0.0285]
                                                
 Epoch 78 Summary:
-  Train - Total: 0.6742, HM: 0.1224, PAF: 0.0406, Cls: 0.0689
-  Val   - Total: 1.4796, HM: 0.1529, PAF: 0.0564, Cls: 0.5033
-  Metrics - Class Acc: 86.63%, PCK@0.2: 81.32%
-  LR: 0.000030
-Epoch 79: 100% 113/113 [00:06<00:00, 16.85it/s, loss=0.9234, hm=0.1487, paf=0.0449, cls=0.1591]
+  Train - Total: 0.6926, HM: 0.1232, PAF: 0.0500, Cls: 0.0665
+  Val   - Total: 1.5290, HM: 0.1519, PAF: 0.0706, Cls: 0.5200
+  Metrics - Class Acc: 86.13%, PCK@0.2: 82.77%
+  LR: 0.000118
+  💾 Saved best model (val_loss: 1.5290)
+Epoch 79: 100% 113/113 [00:29<00:00,  3.83it/s, loss=0.7020, hm=0.1139, paf=0.0701, cls=0.0708]
 
-Epoch 79 - Train: 0.6781 (HM: 0.1235, PAF: 0.0399, Cls: 0.0695)  LR: 0.000027
-Epoch 80: 100% 113/113 [00:06<00:00, 16.84it/s, loss=0.8553, hm=0.1593, paf=0.0566, cls=0.0701]
+Epoch 79 - Train: 0.6936 (HM: 0.1230, PAF: 0.0496, Cls: 0.0681)  LR: 0.000115
+Epoch 80: 100% 113/113 [00:30<00:00,  3.73it/s, loss=0.8483, hm=0.1354, paf=0.0627, cls=0.1208]
                                                
 Epoch 80 Summary:
-  Train - Total: 0.6708, HM: 0.1222, PAF: 0.0408, Cls: 0.0669
-  Val   - Total: 1.5272, HM: 0.1528, PAF: 0.0562, Cls: 0.5358
-  Metrics - Class Acc: 86.52%, PCK@0.2: 81.25%
-  LR: 0.000025
-Epoch 81: 100% 113/113 [00:06<00:00, 16.41it/s, loss=0.5502, hm=0.1003, paf=0.0298, cls=0.0597]
+  Train - Total: 0.6875, HM: 0.1222, PAF: 0.0490, Cls: 0.0670
+  Val   - Total: 1.6118, HM: 0.1516, PAF: 0.0699, Cls: 0.5770
+  Metrics - Class Acc: 85.75%, PCK@0.2: 82.39%
+  LR: 0.000112
+Epoch 81: 100% 113/113 [00:29<00:00,  3.84it/s, loss=1.0813, hm=0.1720, paf=0.0825, cls=0.1522]
 
-Epoch 81 - Train: 0.6682 (HM: 0.1222, PAF: 0.0403, Cls: 0.0657)  LR: 0.000023
-Epoch 82: 100% 113/113 [00:06<00:00, 16.99it/s, loss=1.1164, hm=0.1985, paf=0.0344, cls=0.1691]
+Epoch 81 - Train: 0.6861 (HM: 0.1220, PAF: 0.0490, Cls: 0.0667)  LR: 0.000110
+Epoch 82: 100% 113/113 [00:30<00:00,  3.75it/s, loss=0.9647, hm=0.1756, paf=0.0511, cls=0.1067]
                                                
 Epoch 82 Summary:
-  Train - Total: 0.6726, HM: 0.1224, PAF: 0.0403, Cls: 0.0682
-  Val   - Total: 1.5385, HM: 0.1529, PAF: 0.0559, Cls: 0.5435
-  Metrics - Class Acc: 86.41%, PCK@0.2: 81.32%
-  LR: 0.000020
-Epoch 83: 100% 113/113 [00:06<00:00, 17.07it/s, loss=0.8326, hm=0.1291, paf=0.0645, cls=0.1249]
+  Train - Total: 0.6811, HM: 0.1202, PAF: 0.0480, Cls: 0.0696
+  Val   - Total: 1.6105, HM: 0.1527, PAF: 0.0710, Cls: 0.5718
+  Metrics - Class Acc: 86.08%, PCK@0.2: 81.88%
+  LR: 0.000107
+Epoch 83: 100% 113/113 [00:30<00:00,  3.74it/s, loss=0.8557, hm=0.1598, paf=0.0651, cls=0.0577]
 
-Epoch 83 - Train: 0.6707 (HM: 0.1219, PAF: 0.0397, Cls: 0.0691)  LR: 0.000018
-Epoch 84: 100% 113/113 [00:06<00:00, 17.10it/s, loss=0.9056, hm=0.1706, paf=0.0503, cls=0.0816]
+Epoch 83 - Train: 0.6806 (HM: 0.1209, PAF: 0.0486, Cls: 0.0666)  LR: 0.000105
+Epoch 84: 100% 113/113 [00:29<00:00,  3.77it/s, loss=0.9621, hm=0.1524, paf=0.0583, cls=0.1573]
                                                
 Epoch 84 Summary:
-  Train - Total: 0.6646, HM: 0.1215, PAF: 0.0394, Cls: 0.0666
-  Val   - Total: 1.5356, HM: 0.1528, PAF: 0.0555, Cls: 0.5422
-  Metrics - Class Acc: 86.48%, PCK@0.2: 81.44%
-  LR: 0.000016
-Epoch 85: 100% 113/113 [00:06<00:00, 17.23it/s, loss=0.5218, hm=0.1004, paf=0.0299, cls=0.0403]
+  Train - Total: 0.6740, HM: 0.1201, PAF: 0.0483, Cls: 0.0647
+  Val   - Total: 1.5143, HM: 0.1508, PAF: 0.0693, Cls: 0.5149
+  Metrics - Class Acc: 86.70%, PCK@0.2: 82.22%
+  LR: 0.000102
+  💾 Saved best model (val_loss: 1.5143)
+Epoch 85: 100% 113/113 [00:29<00:00,  3.78it/s, loss=0.5738, hm=0.1061, paf=0.0400, cls=0.0462]
 
-Epoch 85 - Train: 0.6644 (HM: 0.1212, PAF: 0.0396, Cls: 0.0671)  LR: 0.000015
-Epoch 86: 100% 113/113 [00:06<00:00, 17.09it/s, loss=0.6629, hm=0.1115, paf=0.0347, cls=0.0984]
+Epoch 85 - Train: 0.6741 (HM: 0.1196, PAF: 0.0474, Cls: 0.0672)  LR: 0.000100
+Epoch 86: 100% 113/113 [00:29<00:00,  3.80it/s, loss=0.8933, hm=0.1591, paf=0.0629, cls=0.0874]
                                                
 Epoch 86 Summary:
-  Train - Total: 0.6638, HM: 0.1211, PAF: 0.0395, Cls: 0.0669
-  Val   - Total: 1.5107, HM: 0.1526, PAF: 0.0558, Cls: 0.5257
-  Metrics - Class Acc: 86.45%, PCK@0.2: 81.44%
-  LR: 0.000013
-Epoch 87: 100% 113/113 [00:06<00:00, 17.20it/s, loss=0.8481, hm=0.1339, paf=0.0596, cls=0.1287]
+  Train - Total: 0.6670, HM: 0.1195, PAF: 0.0470, Cls: 0.0634
+  Val   - Total: 1.5646, HM: 0.1508, PAF: 0.0697, Cls: 0.5480
+  Metrics - Class Acc: 86.04%, PCK@0.2: 82.68%
+  LR: 0.000097
+Epoch 87: 100% 113/113 [00:29<00:00,  3.78it/s, loss=0.9111, hm=0.1804, paf=0.0451, cls=0.0662]
 
-Epoch 87 - Train: 0.6635 (HM: 0.1204, PAF: 0.0396, Cls: 0.0684)  LR: 0.000011
-Epoch 88: 100% 113/113 [00:06<00:00, 17.21it/s, loss=1.0660, hm=0.1793, paf=0.0546, cls=0.1597]
-                                               
+Epoch 87 - Train: 0.6604 (HM: 0.1187, PAF: 0.0465, Cls: 0.0619)  LR: 0.000095
+Epoch 88: 100% 113/113 [00:29<00:00,  3.82it/s, loss=0.5142, hm=0.1018, paf=0.0337, cls=0.0264]
+
 Epoch 88 Summary:
-  Train - Total: 0.6673, HM: 0.1216, PAF: 0.0398, Cls: 0.0676
-  Val   - Total: 1.5227, HM: 0.1521, PAF: 0.0558, Cls: 0.5350
-  Metrics - Class Acc: 86.51%, PCK@0.2: 81.34%
-  LR: 0.000010
-Epoch 89: 100% 113/113 [00:06<00:00, 17.40it/s, loss=0.7613, hm=0.1277, paf=0.0397, cls=0.1139]
+  Train - Total: 0.6518, HM: 0.1175, PAF: 0.0463, Cls: 0.0595
+  Val   - Total: 1.6397, HM: 0.1495, PAF: 0.0692, Cls: 0.6021
+  Metrics - Class Acc: 86.13%, PCK@0.2: 82.79%
+  LR: 0.000092
+Epoch 89: 100% 113/113 [00:30<00:00,  3.65it/s, loss=0.7551, hm=0.1340, paf=0.0469, cls=0.0836]
 
-Epoch 89 - Train: 0.6645 (HM: 0.1217, PAF: 0.0396, Cls: 0.0658)  LR: 0.000008
-Epoch 90: 100% 113/113 [00:06<00:00, 17.22it/s, loss=0.8279, hm=0.1455, paf=0.0416, cls=0.1083]
+Epoch 89 - Train: 0.6635 (HM: 0.1186, PAF: 0.0462, Cls: 0.0644)  LR: 0.000090
+Epoch 90: 100% 113/113 [00:29<00:00,  3.77it/s, loss=1.0153, hm=0.1641, paf=0.0921, cls=0.1166]
                                                
 Epoch 90 Summary:
-  Train - Total: 0.6634, HM: 0.1210, PAF: 0.0393, Cls: 0.0671
-  Val   - Total: 1.5115, HM: 0.1521, PAF: 0.0557, Cls: 0.5278
-  Metrics - Class Acc: 86.57%, PCK@0.2: 81.41%
-  LR: 0.000007
-Epoch 91: 100% 113/113 [00:06<00:00, 17.23it/s, loss=0.7280, hm=0.1423, paf=0.0509, cls=0.0380]
+  Train - Total: 0.6498, HM: 0.1170, PAF: 0.0453, Cls: 0.0607
+  Val   - Total: 1.6260, HM: 0.1494, PAF: 0.0678, Cls: 0.5953
+  Metrics - Class Acc: 85.94%, PCK@0.2: 82.51%
+  LR: 0.000087
+Epoch 91: 100% 113/113 [00:29<00:00,  3.77it/s, loss=0.7753, hm=0.1183, paf=0.0729, cls=0.1042]
 
-Epoch 91 - Train: 0.6572 (HM: 0.1212, PAF: 0.0391, Cls: 0.0628)  LR: 0.000006
-Epoch 92: 100% 113/113 [00:06<00:00, 17.17it/s, loss=0.5217, hm=0.0981, paf=0.0225, cls=0.0563]
+Epoch 91 - Train: 0.6541 (HM: 0.1169, PAF: 0.0458, Cls: 0.0634)  LR: 0.000085
+Epoch 92: 100% 113/113 [00:29<00:00,  3.78it/s, loss=1.0578, hm=0.1616, paf=0.0942, cls=0.1486]
                                                
 Epoch 92 Summary:
-  Train - Total: 0.6591, HM: 0.1207, PAF: 0.0391, Cls: 0.0654
-  Val   - Total: 1.5038, HM: 0.1526, PAF: 0.0558, Cls: 0.5211
-  Metrics - Class Acc: 86.57%, PCK@0.2: 81.46%
-  LR: 0.000005
-Epoch 93: 100% 113/113 [00:06<00:00, 17.07it/s, loss=0.7456, hm=0.1418, paf=0.0618, cls=0.0366]
+  Train - Total: 0.6561, HM: 0.1168, PAF: 0.0460, Cls: 0.0647
+  Val   - Total: 1.6487, HM: 0.1485, PAF: 0.0696, Cls: 0.6104
+  Metrics - Class Acc: 86.33%, PCK@0.2: 83.02%
+  LR: 0.000082
+Epoch 93: 100% 113/113 [00:30<00:00,  3.70it/s, loss=0.8247, hm=0.1294, paf=0.0635, cls=0.1200]
 
-Epoch 93 - Train: 0.6554 (HM: 0.1204, PAF: 0.0396, Cls: 0.0632)  LR: 0.000004
-Epoch 94: 100% 113/113 [00:06<00:00, 17.27it/s, loss=0.5662, hm=0.0988, paf=0.0316, cls=0.0718]
+Epoch 93 - Train: 0.6429 (HM: 0.1156, PAF: 0.0448, Cls: 0.0605)  LR: 0.000080
+Epoch 94: 100% 113/113 [00:30<00:00,  3.74it/s, loss=1.0937, hm=0.1330, paf=0.0600, cls=0.2945]
                                                
 Epoch 94 Summary:
-  Train - Total: 0.6591, HM: 0.1211, PAF: 0.0393, Cls: 0.0641
-  Val   - Total: 1.5226, HM: 0.1520, PAF: 0.0559, Cls: 0.5352
-  Metrics - Class Acc: 86.51%, PCK@0.2: 81.39%
-  LR: 0.000003
-Epoch 95: 100% 113/113 [00:06<00:00, 16.94it/s, loss=0.7028, hm=0.1139, paf=0.0280, cls=0.1276]
+  Train - Total: 0.6497, HM: 0.1158, PAF: 0.0448, Cls: 0.0646
+  Val   - Total: 1.6014, HM: 0.1474, PAF: 0.0685, Cls: 0.5832
+  Metrics - Class Acc: 86.07%, PCK@0.2: 82.51%
+  LR: 0.000077
+Epoch 95: 100% 113/113 [00:29<00:00,  3.78it/s, loss=0.6767, hm=0.1033, paf=0.0521, cls=0.1061]
 
-Epoch 95 - Train: 0.6557 (HM: 0.1209, PAF: 0.0389, Cls: 0.0629)  LR: 0.000003
-Epoch 96: 100% 113/113 [00:06<00:00, 17.40it/s, loss=1.0482, hm=0.1620, paf=0.0490, cls=0.2016]
-
+Epoch 95 - Train: 0.6485 (HM: 0.1155, PAF: 0.0448, Cls: 0.0647)  LR: 0.000075
+Epoch 96: 100% 113/113 [00:30<00:00,  3.71it/s, loss=0.6262, hm=0.1005, paf=0.0432, cls=0.0920]
+                                               
 Epoch 96 Summary:
-  Train - Total: 0.6602, HM: 0.1209, PAF: 0.0399, Cls: 0.0647
-  Val   - Total: 1.5236, HM: 0.1521, PAF: 0.0560, Cls: 0.5354
-  Metrics - Class Acc: 86.59%, PCK@0.2: 81.15%
-  LR: 0.000002
-Epoch 97: 100% 113/113 [00:06<00:00, 17.36it/s, loss=0.8539, hm=0.1630, paf=0.0359, cls=0.0868]
+  Train - Total: 0.6433, HM: 0.1154, PAF: 0.0441, Cls: 0.0624
+  Val   - Total: 1.6024, HM: 0.1474, PAF: 0.0669, Cls: 0.5861
+  Metrics - Class Acc: 86.36%, PCK@0.2: 83.34%
+  LR: 0.000072
+Epoch 97: 100% 113/113 [00:31<00:00,  3.63it/s, loss=0.9315, hm=0.1517, paf=0.0716, cls=0.1210]
 
-Epoch 97 - Train: 0.6667 (HM: 0.1218, PAF: 0.0394, Cls: 0.0672)  LR: 0.000002
-Epoch 98: 100% 113/113 [00:06<00:00, 17.48it/s, loss=0.7410, hm=0.1258, paf=0.0477, cls=0.0950]
+Epoch 97 - Train: 0.6464 (HM: 0.1151, PAF: 0.0447, Cls: 0.0646)  LR: 0.000070
+Epoch 98: 100% 113/113 [00:30<00:00,  3.66it/s, loss=0.6023, hm=0.1053, paf=0.0512, cls=0.0524]
                                                
 Epoch 98 Summary:
-  Train - Total: 0.6619, HM: 0.1215, PAF: 0.0392, Cls: 0.0650
-  Val   - Total: 1.5326, HM: 0.1523, PAF: 0.0559, Cls: 0.5412
-  Metrics - Class Acc: 86.47%, PCK@0.2: 81.34%
-  LR: 0.000001
-Epoch 99: 100% 113/113 [00:06<00:00, 17.43it/s, loss=0.6400, hm=0.1353, paf=0.0368, cls=0.0166]
+  Train - Total: 0.6315, HM: 0.1140, PAF: 0.0439, Cls: 0.0584
+  Val   - Total: 1.6115, HM: 0.1475, PAF: 0.0668, Cls: 0.5919
+  Metrics - Class Acc: 86.17%, PCK@0.2: 82.94%
+  LR: 0.000068
+Epoch 99: 100% 113/113 [00:30<00:00,  3.70it/s, loss=0.5645, hm=0.1044, paf=0.0531, cls=0.0271]
 
-Epoch 99 - Train: 0.6579 (HM: 0.1205, PAF: 0.0392, Cls: 0.0650)  LR: 0.000001
-Epoch 100: 100% 113/113 [00:06<00:00, 17.37it/s, loss=1.0924, hm=0.1799, paf=0.0555, cls=0.1745]
+Epoch 99 - Train: 0.6259 (HM: 0.1136, PAF: 0.0434, Cls: 0.0563)  LR: 0.000066
+Epoch 100: 100% 113/113 [00:30<00:00,  3.69it/s, loss=0.7957, hm=0.1341, paf=0.0393, cls=0.1205]
                                                
 Epoch 100 Summary:
-  Train - Total: 0.6635, HM: 0.1216, PAF: 0.0399, Cls: 0.0649
-  Val   - Total: 1.5218, HM: 0.1525, PAF: 0.0557, Cls: 0.5338
-  Metrics - Class Acc: 86.53%, PCK@0.2: 81.27%
-  LR: 0.000001
-
-================================================================================
-✅ Training complete! Best val loss: 1.4381
-================================================================================
-
-🎉 M1v2 Training finished successfully!
-💾 Checkpoints saved to: /content/shoes_vto_v2/shoes_vto/outputs/m1v2_training/checkpoints
+  Train - Total: 0.6286, HM: 0.1134, PAF: 0.0434, Cls: 0.0588
+  Val   - Total: 1.5899, HM: 0.1465, PAF: 0.0663, Cls: 0.5810
+  Metrics - Class Acc: 86.27%, PCK@0.2: 83.17%
+  LR: 0.000063
+Epoch 101: 100% 113/113 [00:31<00:00,  3.61it/s, loss=0.4977, hm=0.0912, paf=0.0371, cls=0.0391]

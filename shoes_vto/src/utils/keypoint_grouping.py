@@ -577,7 +577,7 @@ def decode_spatial_instances_single(
         centers = [np.mean(pts_xy, axis=0)]
 
     PERIPHERAL_KPS = {0, 1, 2, 8, 9, 10} if num_k == 13 else {0, 1, 2, 9, 10, 11}
-    LEG_KPS = {12} if num_k == 13 else {12, 15}
+    LEG_KPS = set() if num_k == 13 else {12, 15}
 
     # Precompute Voronoi masks for partition fallback
     yy, xx = np.indices((H, W), dtype=np.float32)

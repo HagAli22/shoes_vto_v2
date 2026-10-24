@@ -171,32 +171,63 @@ def generate_heatmaps_batch(keypoints_batch, heatmap_size=64, sigma=3.5, device=
     masks = torch.zeros(batch_size, num_keypoints, heatmap_size, heatmap_size, device=device)
     
     for batch_idx, instances in enumerate(keypoints_batch):
-        # Aggregate keypoints from all instances in the image
-        for instance in instances:
-            keypoints = instance['keypoints']  # [[x, y, v], ...] for 16 KPs
+        if not instances:
+            continue
             
-            for kp_idx, (x, y, v) in enumerate(keypoints):
-                if v > 0:  # Only process visible or covered keypoints (v=1 or v=2)
-                    # Convert from image coordinates (0-256) to heatmap coordinates (0-64)
-                    # Assuming keypoints are already in resized image coordinates (256×256)
+        for kp_idx in range(num_keypoints):
+            # Check if any instance in this image has keypoint kp_idx labeled (v > 0)
+            has_labeled = False
+            for instance in instances:
+                kps = instance.get('keypoints', [])
+                if kp_idx < len(kps) and kps[kp_idx][2] > 0:
+                    has_labeled = True
+                    break
+                    
+            if not has_labeled:
+                # No instance has keypoint kp_idx labeled.
+                # Leave masks[batch_idx, kp_idx] = 0.0 everywhere (zero loss for this channel).
+                continue
+                
+            # At least one instance has this keypoint labeled.
+            # Step 1: Initialize mask to 1.0 everywhere so background is supervised.
+            masks[batch_idx, kp_idx] = 1.0
+            
+            # Step 2: Carve out spatial ignore region (0.0) over instances where keypoint is v=0.
+            # Uses reliable instance bounding box rather than placeholder keypoint coordinates.
+            for instance in instances:
+                kps = instance.get('keypoints', [])
+                v = kps[kp_idx][2] if kp_idx < len(kps) else 0
+                if v == 0 and 'bbox' in instance:
+                    cx, cy, w, h = instance['bbox']
+                    x1 = int(max(0, (cx - w / 2.0) * heatmap_size))
+                    y1 = int(max(0, (cy - h / 2.0) * heatmap_size))
+                    x2 = int(min(heatmap_size, (cx + w / 2.0) * heatmap_size))
+                    y2 = int(min(heatmap_size, (cy + h / 2.0) * heatmap_size))
+                    if x2 > x1 and y2 > y1:
+                        masks[batch_idx, kp_idx, y1:y2, x1:x2] = 0.0
+            
+            # Step 3: Draw Gaussian peaks for instances with v > 0 and guarantee peak region is unmasked.
+            for instance in instances:
+                kps = instance.get('keypoints', [])
+                if kp_idx < len(kps) and kps[kp_idx][2] > 0:
+                    x, y, v = kps[kp_idx]
                     hm_x = x * (heatmap_size / 256.0)
                     hm_y = y * (heatmap_size / 256.0)
-                    
-                    # Clip to valid range
                     hm_x = max(0, min(heatmap_size - 1, hm_x))
                     hm_y = max(0, min(heatmap_size - 1, hm_y))
                     
-                    # Generate Gaussian heatmap directly on GPU
                     gaussian = generate_gaussian_heatmap(heatmap_size, heatmap_size, hm_x, hm_y, sigma, device=device)
-                    
-                    # Take maximum (for overlapping instances)
                     heatmaps[batch_idx, kp_idx] = torch.maximum(
                         heatmaps[batch_idx, kp_idx], 
                         gaussian
                     )
-                    
-                    # Mark as labeled
-                    masks[batch_idx, kp_idx] = 1.0
+                    # Protect positive peak region from being masked out if bboxes overlap
+                    peak_mask = gaussian > 0.01
+                    masks[batch_idx, kp_idx] = torch.where(
+                        peak_mask, 
+                        torch.ones_like(masks[batch_idx, kp_idx]), 
+                        masks[batch_idx, kp_idx]
+                    )
     
     return heatmaps, masks
 

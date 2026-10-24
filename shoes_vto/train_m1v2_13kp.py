@@ -103,6 +103,12 @@ def parse_args():
         action='store_true',
         help='Train MobileNetV3 backbone purely from random initialization'
     )
+    parser.add_argument(
+        '--vis_interval',
+        type=int,
+        default=10,
+        help='Epoch interval to run and save live test visualizations (default: 10)'
+    )
     return parser.parse_args()
 
 
@@ -206,6 +212,7 @@ def main():
         'num_keypoints': 13,
         'paf_config': str(paf_config_path),
         'prefetch_factor': 2 if args.num_workers > 0 else None,
+        'vis_interval': args.vis_interval,
         'loss_weights': {
             'heatmap': 4.0,
             'paf': 2.0,
