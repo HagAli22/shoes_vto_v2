@@ -31,7 +31,9 @@ if str(SRC_DIR) not in sys.path:
 from models.arshoe_m1v2 import ARShoeM1v2
 from utils.keypoint_grouping import (
     detect_peaks,
-    decode_spatial_instances_single
+    decode_spatial_instances_single,
+    decode_paf_instances_single,
+    load_paf_config
 )
 from tools.test_fixed_decoder import (
     decode_spatial_instances_fixed,
@@ -205,6 +207,16 @@ def evaluate_decoders(model, samples, device):
             for p in preds_orig:
                 p['keypoints'] = [[kp[0] * scale, kp[1] * scale, kp[2]] for kp in p['keypoints']]
                 
+            # --- Decode using OpenPose PAF-Led Assembly ---
+            paf_cfg = load_paf_config("paf_connections_13kp.yaml")
+            raw_paf = decode_paf_instances_single(heatmaps, pafs, class_probs, paf_config=paf_cfg)
+            preds_paf = []
+            for inst in raw_paf:
+                preds_paf.append({
+                    'class_id': inst['class_id'],
+                    'keypoints': [[kp[0] * scale, kp[1] * scale, kp[2]] for kp in inst['keypoints']]
+                })
+
             # --- Decode using Fixed Decoder ---
             preds_fixed = decode_spatial_instances_fixed(heatmaps, class_probs, pafs=pafs)
             # preds_fixed already returns keypoints in 256x256 space

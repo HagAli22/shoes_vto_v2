@@ -806,6 +806,330 @@ def decode_spatial_instances_single(
     return instances[:max_instances]
 
 
+
+def decode_paf_instances_single(
+    heatmaps,
+    pafs,
+    class_probs,
+    peak_threshold=0.10,
+    nms_window=3,
+    max_peaks_per_channel=10,
+    paf_threshold=0.05,
+    max_limb_dist=28.0,
+    min_keypoints=4,
+    max_instances=2,
+    subpixel=True,
+    paf_config=None
+):
+    """
+    OpenPose-inspired PAF-led multi-instance keypoint decoder.
+    
+    1. Plateau-safe peak detection with subpixel quadratic Taylor expansion refinement.
+    2. Line integral PAF candidate scoring along 16 limbs with distance bounds.
+    3. One-to-one disjoint bipartite matching per limb.
+    4. Graph tree instance assembly strictly enforcing one peak per keypoint type,
+       with contradiction rejection for conflicting merges.
+    5. Post-assembly left/right foot assignment from class head probabilities.
+    
+    Args:
+        heatmaps: [K, H, W] (K=13 or 16)
+        pafs: [2*L, H, W] (32 channels for 16 limbs)
+        class_probs: [2, H, W]
+        peak_threshold: Minimum peak confidence
+        nms_window: Window size for NMS
+        max_peaks_per_channel: Max peaks per keypoint channel
+        paf_threshold: Minimum PAF line integral score
+        max_limb_dist: Maximum physical pixel distance between keypoints on 64x64 grid
+        min_keypoints: Minimum keypoints required to form a valid foot instance
+        max_instances: Maximum instances to return (default 2)
+        subpixel: Apply quadratic subpixel refinement
+        paf_config: PAF config dict or path
+        
+    Returns:
+        instances: List of dicts with 'keypoints' (64x64), 'score', 'class_id', 'class_confidence'
+    """
+    from scipy.ndimage import maximum_filter, label as nd_label
+
+    if isinstance(heatmaps, torch.Tensor):
+        heatmaps = heatmaps.detach().cpu().numpy()
+    if isinstance(pafs, torch.Tensor):
+        pafs = pafs.detach().cpu().numpy()
+    if isinstance(class_probs, torch.Tensor):
+        class_probs = class_probs.detach().cpu().numpy()
+
+    num_k = heatmaps.shape[0]
+    H, W = heatmaps.shape[1], heatmaps.shape[2]
+
+    # Load PAF config
+    if paf_config is None:
+        paf_cfg = load_paf_config("paf_connections_13kp.yaml" if num_k == 13 else "paf_connections.yaml")
+    elif isinstance(paf_config, (str, Path)):
+        with open(paf_config, 'r', encoding='utf-8') as f:
+            paf_cfg = yaml.safe_load(f)
+    else:
+        paf_cfg = paf_config
+    limb_pairs = paf_cfg.get('limb_pairs', [])
+    num_limbs = len(limb_pairs)
+
+    # -------------------------------------------------------------------------
+    # 1. Plateau-Safe Peak Detection with Subpixel Refinement
+    # -------------------------------------------------------------------------
+    all_peaks = {}
+    for k in range(num_k):
+        hm = heatmaps[k]
+        local_max = maximum_filter(hm, size=nms_window)
+        peaks_binary = (hm == local_max) & (hm >= peak_threshold)
+        
+        labeled_mask, num_features = nd_label(peaks_binary)
+        k_peaks = []
+        if num_features > 0:
+            for feat_idx in range(1, num_features + 1):
+                ys, xs = np.where(labeled_mask == feat_idx)
+                best_i = np.argmax(hm[ys, xs])
+                y, x = int(ys[best_i]), int(xs[best_i])
+                conf = float(hm[y, x])
+                
+                sub_x, sub_y = float(x), float(y)
+                if subpixel and 1 <= x < W - 1 and 1 <= y < H - 1:
+                    dx = 0.5 * (hm[y, x + 1] - hm[y, x - 1])
+                    dxx = hm[y, x + 1] - 2.0 * hm[y, x] + hm[y, x - 1]
+                    if abs(dxx) > 1e-5:
+                        offset_x = -dx / dxx
+                        sub_x += float(np.clip(offset_x, -0.5, 0.5))
+                    dy = 0.5 * (hm[y + 1, x] - hm[y - 1, x])
+                    dyy = hm[y + 1, x] - 2.0 * hm[y, x] + hm[y - 1, x]
+                    if abs(dyy) > 1e-5:
+                        offset_y = -dy / dyy
+                        sub_y += float(np.clip(offset_y, -0.5, 0.5))
+                k_peaks.append((sub_x, sub_y, conf))
+                
+        k_peaks.sort(key=lambda p: p[2], reverse=True)
+        all_peaks[k] = k_peaks[:max_peaks_per_channel]
+
+    # -------------------------------------------------------------------------
+    # 2. Score Candidate Pairs along Configured Limbs using PAF Line Integrals
+    # -------------------------------------------------------------------------
+    all_matched_connections = []
+
+    for limb_idx, (u, v, name) in enumerate(limb_pairs):
+        if limb_idx * 2 + 1 >= pafs.shape[0] or u >= num_k or v >= num_k:
+            continue
+            
+        peaks_u = all_peaks.get(u, [])
+        peaks_v = all_peaks.get(v, [])
+        if not peaks_u or not peaks_v:
+            continue
+
+        paf_x = pafs[limb_idx * 2]
+        paf_y = pafs[limb_idx * 2 + 1]
+
+        limb_connections = []
+        for i, p_u in enumerate(peaks_u):
+            for j, p_v in enumerate(peaks_v):
+                dx = p_v[0] - p_u[0]
+                dy = p_v[1] - p_u[1]
+                dist = np.hypot(dx, dy)
+                if dist > max_limb_dist or dist < 0.5:
+                    continue
+
+                ux = dx / dist
+                uy = dy / dist
+
+                # Sample 10 points along the line segment
+                t_vals = np.linspace(0.0, 1.0, 10, dtype=np.float32)
+                sample_xs = np.clip(np.round(p_u[0] + t_vals * dx).astype(int), 0, W - 1)
+                sample_ys = np.clip(np.round(p_u[1] + t_vals * dy).astype(int), 0, H - 1)
+
+                dot_prods = paf_x[sample_ys, sample_xs] * ux + paf_y[sample_ys, sample_xs] * uy
+                valid_count = int(np.sum(dot_prods > 0.05))
+                line_score = float(np.mean(dot_prods))
+
+                # OpenPose criterion: at least 40% positive samples and positive mean integral
+                if valid_count >= 4 and line_score > paf_threshold:
+                    comb_score = line_score + 0.5 * (p_u[2] + p_v[2])
+                    limb_connections.append((comb_score, i, j, p_u, p_v))
+
+        # -------------------------------------------------------------------------
+        # 3. Disjoint One-to-One Bipartite Matching for this Limb
+        # -------------------------------------------------------------------------
+        limb_connections.sort(key=lambda item: item[0], reverse=True)
+        matched_u = set()
+        matched_v = set()
+        for comb_score, i, j, p_u, p_v in limb_connections:
+            if i not in matched_u and j not in matched_v:
+                matched_u.add(i)
+                matched_v.add(j)
+                all_matched_connections.append({
+                    'score': comb_score,
+                    'limb_idx': limb_idx,
+                    'u': u,
+                    'v': v,
+                    'peak_u_idx': i,
+                    'peak_v_idx': j,
+                    'p_u': p_u,
+                    'p_v': p_v
+                })
+
+    # Sort all limb matches across the entire skeleton by affinity score descending
+    all_matched_connections.sort(key=lambda item: item['score'], reverse=True)
+
+    # -------------------------------------------------------------------------
+    # 4. Instance Assembly with Strict Contradiction Rejection
+    # -------------------------------------------------------------------------
+    # instances: list of dicts: {'kps': {kp_type: (x, y, conf, cand_idx)}, 'score': float, 'edges': int}
+    assembled_instances = []
+
+    for conn in all_matched_connections:
+        u = conn['u']
+        v = conn['v']
+        cand_u = conn['peak_u_idx']
+        cand_v = conn['peak_v_idx']
+        p_u = conn['p_u']
+        p_v = conn['p_v']
+        score = conn['score']
+
+        inst_u_idx = None
+        inst_v_idx = None
+
+        for idx, inst in enumerate(assembled_instances):
+            if u in inst['kps'] and inst['kps'][u][3] == cand_u:
+                inst_u_idx = idx
+            if v in inst['kps'] and inst['kps'][v][3] == cand_v:
+                inst_v_idx = idx
+
+        if inst_u_idx is None and inst_v_idx is None:
+            # Create a new instance
+            new_inst = {
+                'kps': {
+                    u: (p_u[0], p_u[1], p_u[2], cand_u),
+                    v: (p_v[0], p_v[1], p_v[2], cand_v)
+                },
+                'score': score,
+                'edges': 1
+            }
+            assembled_instances.append(new_inst)
+
+        elif inst_u_idx is not None and inst_v_idx is None:
+            # Add v to inst_u if no conflicting v exists
+            inst = assembled_instances[inst_u_idx]
+            if v not in inst['kps']:
+                inst['kps'][v] = (p_v[0], p_v[1], p_v[2], cand_v)
+                inst['score'] += score
+                inst['edges'] += 1
+            # If v already in inst with different cand_v, reject (contradiction)
+
+        elif inst_u_idx is None and inst_v_idx is not None:
+            # Add u to inst_v if no conflicting u exists
+            inst = assembled_instances[inst_v_idx]
+            if u not in inst['kps']:
+                inst['kps'][u] = (p_u[0], p_u[1], p_u[2], cand_u)
+                inst['score'] += score
+                inst['edges'] += 1
+
+        elif inst_u_idx is not None and inst_v_idx is not None:
+            if inst_u_idx == inst_v_idx:
+                # Same instance (cycle/loop completion)
+                inst = assembled_instances[inst_u_idx]
+                inst['score'] += score
+                inst['edges'] += 1
+            else:
+                # Attempting to merge two instances: CONTRADICTION CHECK
+                inst_u = assembled_instances[inst_u_idx]
+                inst_v = assembled_instances[inst_v_idx]
+                common_types = set(inst_u['kps'].keys()) & set(inst_v['kps'].keys())
+                has_contradiction = False
+                for c_k in common_types:
+                    if inst_u['kps'][c_k][3] != inst_v['kps'][c_k][3]:
+                        has_contradiction = True
+                        break
+
+                if not has_contradiction:
+                    # Merge inst_v into inst_u
+                    for k_idx, val in inst_v['kps'].items():
+                        inst_u['kps'][k_idx] = val
+                    inst_u['score'] += inst_v['score'] + score
+                    inst_u['edges'] += inst_v['edges'] + 1
+                    assembled_instances.pop(inst_v_idx)
+                # Else: Contradictory merge rejected! Keep as separate instances.
+
+    # -------------------------------------------------------------------------
+    # 5. Format Instances & Filter Spurious Fragments
+    # -------------------------------------------------------------------------
+    valid_instances = []
+    for inst in assembled_instances:
+        if len(inst['kps']) < min_keypoints:
+            continue
+
+        kps_list = []
+        conf_list = []
+        for k in range(num_k):
+            if k in inst['kps']:
+                x, y, conf, _ = inst['kps'][k]
+                kps_list.append([x, y, conf])
+                conf_list.append(conf)
+            else:
+                kps_list.append([0.0, 0.0, 0.0])
+
+        avg_conf = float(np.mean(conf_list)) if conf_list else 0.0
+        inst_score = avg_conf + (inst['score'] / max(1, inst['edges']))
+        valid_instances.append({
+            'keypoints': kps_list,
+            'score': inst_score,
+            'num_keypoints': len(inst['kps'])
+        })
+
+    valid_instances.sort(key=lambda item: item['score'], reverse=True)
+    valid_instances = valid_instances[:max_instances]
+
+    # -------------------------------------------------------------------------
+    # 6. Assign Left / Right Class using Class Map
+    # -------------------------------------------------------------------------
+    for inst in valid_instances:
+        left_votes = []
+        right_votes = []
+        for kx, ky, kv in inst['keypoints']:
+            if kv > 0:
+                ix = int(np.clip(np.round(kx), 0, W - 1))
+                iy = int(np.clip(np.round(ky), 0, H - 1))
+                left_votes.append(float(class_probs[0, iy, ix]))
+                right_votes.append(float(class_probs[1, iy, ix]))
+
+        p_left = float(np.mean(left_votes)) if left_votes else 0.5
+        p_right = float(np.mean(right_votes)) if right_votes else 0.5
+        inst['p_left'] = p_left
+        inst['p_right'] = p_right
+
+    if len(valid_instances) == 1:
+        if valid_instances[0]['p_left'] >= valid_instances[0]['p_right']:
+            valid_instances[0]['class_id'] = 0
+            valid_instances[0]['class_name'] = 'left_foot'
+            valid_instances[0]['class_confidence'] = valid_instances[0]['p_left']
+        else:
+            valid_instances[0]['class_id'] = 1
+            valid_instances[0]['class_name'] = 'right_foot'
+            valid_instances[0]['class_confidence'] = valid_instances[0]['p_right']
+    elif len(valid_instances) >= 2:
+        # Resolve joint assignment: L0+R1 vs R0+L1
+        score_lr = valid_instances[0]['p_left'] + valid_instances[1]['p_right']
+        score_rl = valid_instances[0]['p_right'] + valid_instances[1]['p_left']
+        if score_lr >= score_rl:
+            valid_instances[0]['class_id'] = 0
+            valid_instances[0]['class_name'] = 'left_foot'
+            valid_instances[0]['class_confidence'] = valid_instances[0]['p_left']
+            valid_instances[1]['class_id'] = 1
+            valid_instances[1]['class_name'] = 'right_foot'
+            valid_instances[1]['class_confidence'] = valid_instances[1]['p_right']
+        else:
+            valid_instances[0]['class_id'] = 1
+            valid_instances[0]['class_name'] = 'right_foot'
+            valid_instances[0]['class_confidence'] = valid_instances[0]['p_right']
+            valid_instances[1]['class_id'] = 0
+            valid_instances[1]['class_name'] = 'left_foot'
+            valid_instances[1]['class_confidence'] = valid_instances[1]['p_left']
+
+    return valid_instances
+
+
 def group_keypoints(heatmaps, pafs, class_probs, 
                     peak_threshold=0.1, 
                     paf_threshold=0.05, 
@@ -837,6 +1161,24 @@ def group_keypoints(heatmaps, pafs, class_probs,
     batch_size = heatmaps.shape[0]
     num_k = heatmaps.shape[1]
     batch_instances = []
+
+    if method == 'paf_assembly':
+        for b in range(batch_size):
+            paf_b = pafs[b] if pafs is not None else None
+            cls_b = class_probs[b] if class_probs is not None else None
+            insts = decode_paf_instances_single(
+                heatmaps=heatmaps[b],
+                pafs=paf_b,
+                class_probs=cls_b,
+                peak_threshold=peak_threshold,
+                nms_window=nms_window,
+                min_keypoints=min_keypoints,
+                max_instances=max_instances,
+                subpixel=subpixel,
+                paf_config=paf_config
+            )
+            batch_instances.append(insts)
+        return batch_instances
 
     if method == 'spatial':
         for b in range(batch_size):

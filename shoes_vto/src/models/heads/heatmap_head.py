@@ -140,60 +140,41 @@ def generate_gaussian_heatmap(height, width, center_x, center_y, sigma=2.0, devi
     return heatmap
 
 
-def generate_heatmaps_batch(keypoints_batch, heatmap_size=64, sigma=3.5, device='cpu', num_keypoints=None):
+def generate_heatmaps_batch(keypoints_batch, heatmap_size=64, sigma=3.5, device='cpu', num_keypoints=13):
     """
-    Generate ground truth heatmaps for a batch - OPTIMIZED FOR GPU
+    Generate ground truth heatmaps for a batch with robust spatial visibility masking.
     
     Args:
-        keypoints_batch: List of instances per image in batch
-            Each element is a list of instances in that image
-            Each instance has 'keypoints': [[x, y, v], ...]
-        heatmap_size: Size of heatmap (64 for stride=4)
-        sigma: Gaussian sigma in pixels on heatmap (increased to 3.5 for better learning)
-        device: 'cpu' or 'cuda' for GPU acceleration
-        num_keypoints: Number of keypoints (e.g. 13 or 16), auto-detected if None
+        keypoints_batch: List of instances per image in batch.
+            Each element is a list of instances in that image.
+            Each instance has 'keypoints': [[x, y, v], ...] and optional 'bbox': [cx, cy, w, h] (normalized).
+        heatmap_size: Size of heatmap (typically 64 for stride=4).
+        sigma: Gaussian sigma in pixels on heatmap.
+        device: 'cpu' or 'cuda' for GPU acceleration.
+        num_keypoints: Number of keypoints (default: 13).
     
     Returns:
-        heatmaps: [B, K, H, W] ground truth heatmaps
-        masks: [B, K, H, W] binary masks (1 where keypoint is labeled, 0 otherwise)
+        heatmaps: [B, K, H, W] ground truth Gaussian heatmaps
+        masks: [B, K, H, W] binary masks (1 where supervised, 0 where uncertain)
     """
     batch_size = len(keypoints_batch)
     if num_keypoints is None:
-        found_k = 16
+        num_keypoints = 13
         for insts in keypoints_batch:
             if insts and 'keypoints' in insts[0]:
-                found_k = len(insts[0]['keypoints'])
+                num_keypoints = len(insts[0]['keypoints'])
                 break
-        num_keypoints = found_k
-    
-    # Create tensors directly on target device
+                
     heatmaps = torch.zeros(batch_size, num_keypoints, heatmap_size, heatmap_size, device=device)
-    masks = torch.zeros(batch_size, num_keypoints, heatmap_size, heatmap_size, device=device)
+    masks = torch.ones(batch_size, num_keypoints, heatmap_size, heatmap_size, device=device)
     
     for batch_idx, instances in enumerate(keypoints_batch):
         if not instances:
+            # Truly negative image: entire image supervised as background 0.0
             continue
             
         for kp_idx in range(num_keypoints):
-            # Check if any instance in this image has keypoint kp_idx labeled (v > 0)
-            has_labeled = False
-            for instance in instances:
-                kps = instance.get('keypoints', [])
-                if kp_idx < len(kps) and kps[kp_idx][2] > 0:
-                    has_labeled = True
-                    break
-                    
-            if not has_labeled:
-                # No instance has keypoint kp_idx labeled.
-                # Leave masks[batch_idx, kp_idx] = 0.0 everywhere (zero loss for this channel).
-                continue
-                
-            # At least one instance has this keypoint labeled.
-            # Step 1: Initialize mask to 1.0 everywhere so background is supervised.
-            masks[batch_idx, kp_idx] = 1.0
-            
-            # Step 2: Carve out spatial ignore region (0.0) over instances where keypoint is v=0.
-            # Uses reliable instance bounding box rather than placeholder keypoint coordinates.
+            # Step 1: Carve out spatial ignore region (mask = 0.0) over instances where keypoint is unlabeled (v=0)
             for instance in instances:
                 kps = instance.get('keypoints', [])
                 v = kps[kp_idx][2] if kp_idx < len(kps) else 0
@@ -205,30 +186,22 @@ def generate_heatmaps_batch(keypoints_batch, heatmap_size=64, sigma=3.5, device=
                     y2 = int(min(heatmap_size, (cy + h / 2.0) * heatmap_size))
                     if x2 > x1 and y2 > y1:
                         masks[batch_idx, kp_idx, y1:y2, x1:x2] = 0.0
-            
-            # Step 3: Draw Gaussian peaks for instances with v > 0 and guarantee peak region is unmasked.
+                        
+            # Step 2: Draw Gaussian peaks for visible keypoints (v > 0) and enforce mask = 1.0
             for instance in instances:
                 kps = instance.get('keypoints', [])
                 if kp_idx < len(kps) and kps[kp_idx][2] > 0:
                     x, y, v = kps[kp_idx]
-                    hm_x = x * (heatmap_size / 256.0)
-                    hm_y = y * (heatmap_size / 256.0)
-                    hm_x = max(0, min(heatmap_size - 1, hm_x))
-                    hm_y = max(0, min(heatmap_size - 1, hm_y))
+                    hm_x = max(0.0, min(float(heatmap_size - 1), x * (heatmap_size / 256.0)))
+                    hm_y = max(0.0, min(float(heatmap_size - 1), y * (heatmap_size / 256.0)))
                     
                     gaussian = generate_gaussian_heatmap(heatmap_size, heatmap_size, hm_x, hm_y, sigma, device=device)
-                    heatmaps[batch_idx, kp_idx] = torch.maximum(
-                        heatmaps[batch_idx, kp_idx], 
-                        gaussian
-                    )
+                    heatmaps[batch_idx, kp_idx] = torch.maximum(heatmaps[batch_idx, kp_idx], gaussian)
+                    
                     # Protect positive peak region from being masked out if bboxes overlap
                     peak_mask = gaussian > 0.01
-                    masks[batch_idx, kp_idx] = torch.where(
-                        peak_mask, 
-                        torch.ones_like(masks[batch_idx, kp_idx]), 
-                        masks[batch_idx, kp_idx]
-                    )
-    
+                    masks[batch_idx, kp_idx][peak_mask] = 1.0
+                    
     return heatmaps, masks
 
 

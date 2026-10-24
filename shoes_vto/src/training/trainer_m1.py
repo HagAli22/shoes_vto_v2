@@ -173,18 +173,21 @@ class ARShoeM1Trainer:
             # Pre-generate all GT on GPU in parallel
             with torch.cuda.amp.autocast(enabled=self.use_amp):
                 # Generate all ground truth tensors DIRECTLY ON GPU
+                num_k = self.config.get('num_keypoints', 13)
                 gt_heatmaps, hm_masks = generate_heatmaps_batch(
                     instances,
                     heatmap_size=64,
-                    sigma=6.0,       # Wider Gaussian (was 3.5): 5-6px peaks → clearer gradient signal
-                    device=self.device  # Generate directly on GPU
+                    sigma=6.0,
+                    device=self.device,
+                    num_keypoints=num_k
                 )
                 gt_pafs, paf_masks = generate_pafs_batch(
                     instances,
                     heatmap_size=64,
                     paf_width=8,
-                    device=self.device,  # 🚀 Generate directly on GPU
-                    paf_config=self.config.get('paf_config', None)
+                    device=self.device,
+                    paf_config=self.config.get('paf_config', None),
+                    num_limbs=16
                 )
                 gt_class_maps, _ = generate_class_maps_batch(
                     instances,
@@ -269,18 +272,21 @@ class ARShoeM1Trainer:
                 instances = batch['instances']
                 
                 # Generate all GT DIRECTLY ON GPU with validity masks
+                num_k = self.config.get('num_keypoints', 13)
                 gt_heatmaps, hm_masks = generate_heatmaps_batch(
                     instances,
                     heatmap_size=64,
-                    sigma=6.0,       # Match train sigma for consistent evaluation
-                    device=self.device  # Generate directly on GPU
+                    sigma=6.0,
+                    device=self.device,
+                    num_keypoints=num_k
                 )
                 gt_pafs, paf_masks = generate_pafs_batch(
                     instances,
                     heatmap_size=64,
                     paf_width=8,
-                    device=self.device,  # 🚀 Generate directly on GPU
-                    paf_config=self.config.get('paf_config', None)
+                    device=self.device,
+                    paf_config=self.config.get('paf_config', None),
+                    num_limbs=16
                 )
                 gt_class_maps, _ = generate_class_maps_batch(
                     instances,
