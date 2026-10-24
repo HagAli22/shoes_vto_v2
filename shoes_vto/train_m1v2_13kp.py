@@ -60,13 +60,13 @@ def parse_args():
     parser.add_argument(
         '--batch_size',
         type=int,
-        default=16,
+        default=64,
         help='Batch size'
     )
     parser.add_argument(
         '--lr',
         type=float,
-        default=0.0005,
+        default=0.001,
         help='Peak learning rate for heads (backbone uses 0.5x lr)'
     )
     parser.add_argument(
@@ -90,7 +90,7 @@ def parse_args():
     parser.add_argument(
         '--num_workers',
         type=int,
-        default=4 if sys.platform != 'win32' else 0,
+        default=2 if sys.platform != 'win32' else 0,
         help='DataLoader worker count'
     )
     parser.add_argument(

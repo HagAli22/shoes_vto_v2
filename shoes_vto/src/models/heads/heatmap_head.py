@@ -112,31 +112,25 @@ class HeatmapHeadWithPixelShuffle(nn.Module):
         return heatmaps
 
 
+_GRID_CACHE_HM = {}
+
+
+def _get_hm_grid(height, width, device):
+    key = (height, width, str(device))
+    if key not in _GRID_CACHE_HM:
+        x = torch.arange(0, width, dtype=torch.float32, device=device)
+        y = torch.arange(0, height, dtype=torch.float32, device=device)
+        yy, xx = torch.meshgrid(y, x, indexing='ij')
+        _GRID_CACHE_HM[key] = (xx, yy)
+    return _GRID_CACHE_HM[key]
+
+
 def generate_gaussian_heatmap(height, width, center_x, center_y, sigma=2.0, device='cpu'):
     """
-    Generate a single Gaussian heatmap - OPTIMIZED FOR GPU
-    
-    Args:
-        height: Heatmap height (typically 64)
-        width: Heatmap width (typically 64)
-        center_x: Keypoint x coordinate (0 to width-1)
-        center_y: Keypoint y coordinate (0 to height-1)
-        sigma: Gaussian standard deviation in pixels
-        device: 'cpu' or 'cuda' for GPU acceleration
-    
-    Returns:
-        heatmap: [H, W] Gaussian heatmap with peak at (center_x, center_y)
+    Generate a single Gaussian heatmap with cached coordinate grids
     """
-    # Create coordinate grids directly on target device
-    x = torch.arange(0, width, dtype=torch.float32, device=device)
-    y = torch.arange(0, height, dtype=torch.float32, device=device)
-    
-    # Meshgrid
-    yy, xx = torch.meshgrid(y, x, indexing='ij')
-    
-    # Gaussian formula: exp(-((x-cx)^2 + (y-cy)^2) / (2*sigma^2))
+    xx, yy = _get_hm_grid(height, width, device)
     heatmap = torch.exp(-((xx - center_x) ** 2 + (yy - center_y) ** 2) / (2 * sigma ** 2))
-    
     return heatmap
 
 

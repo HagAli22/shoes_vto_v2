@@ -87,6 +87,19 @@ def load_paf_config(config_name="paf_connections_13kp.yaml"):
     raise FileNotFoundError(f"Could not find {fname} in any of: {possible_paths}")
 
 
+_GRID_CACHE_PAF = {}
+
+
+def _get_paf_grid(height, width, device):
+    key = (height, width, str(device))
+    if key not in _GRID_CACHE_PAF:
+        xx = torch.arange(width, dtype=torch.float32, device=device)
+        yy = torch.arange(height, dtype=torch.float32, device=device)
+        yy_grid, xx_grid = torch.meshgrid(yy, xx, indexing='ij')
+        _GRID_CACHE_PAF[key] = (xx_grid, yy_grid)
+    return _GRID_CACHE_PAF[key]
+
+
 def generate_paf_field(height, width, kp_from, kp_to, paf_width=8, device='cpu'):
     """
     Generate PAF vector field for a single limb - VECTORIZED FOR SPEED
@@ -125,10 +138,8 @@ def generate_paf_field(height, width, kp_from, kp_to, paf_width=8, device='cpu')
     limb_unit_x = limb_vec_x / limb_length
     limb_unit_y = limb_vec_y / limb_length
     
-    # VECTORIZED: Create coordinate grids on GPU
-    xx = torch.arange(width, dtype=torch.float32, device=device)
-    yy = torch.arange(height, dtype=torch.float32, device=device)
-    yy_grid, xx_grid = torch.meshgrid(yy, xx, indexing='ij')
+    # VECTORIZED: Use pre-cached coordinate grids on device
+    xx_grid, yy_grid = _get_paf_grid(height, width, device)
     
     # Vector from kp_from to all pixels (vectorized)
     pixel_vec_x = xx_grid - x1
