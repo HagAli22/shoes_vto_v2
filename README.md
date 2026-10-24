@@ -100,9 +100,13 @@ The pipeline includes crucial ground-truth supervision corrections:
 ## 📂 Repository Structure
 
 ```
-├── configs/
-│   └── paf_connections_13kp.yaml           # 16-limb PAF configuration for 13 KPs
 ├── shoes_vto/
+│   ├── configs/
+│   │   ├── paf_connections_13kp.yaml       # 16-limb PAF configuration for 13 KPs
+│   │   ├── skeleton_priors_train_13kp.json # Pairwise distance priors for 13 KPs
+│   │   ├── keypoint_schema_13kp.yaml       # Anatomical schema definition
+│   │   ├── train_config_13kp.yaml          # Hyperparameter config
+│   │   └── box_calibration.json            # Foot bounding box calibration margins
 │   ├── src/
 │   │   ├── models/
 │   │   │   ├── arshoe_m1v2.py              # ARShoe M1v2 architecture

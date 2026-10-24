@@ -45,7 +45,7 @@ def load_model(checkpoint_path, device='cpu'):
     if not checkpoint_path.exists():
         raise FileNotFoundError(f"Checkpoint not found: {checkpoint_path}")
 
-    model = ARShoeM1v2()
+    model = ARShoeM1v2(num_keypoints=13, num_limbs=16)
     ckpt = torch.load(checkpoint_path, map_location=device, weights_only=False)
     
     if isinstance(ckpt, dict) and 'model_state_dict' in ckpt:

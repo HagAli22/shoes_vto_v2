@@ -21,7 +21,7 @@ from tqdm import tqdm
 # Add src to path
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from models.arshoe_m1 import ARShoeM1
+from models.arshoe_m1v2 import ARShoeM1v2
 from models.heads.heatmap_head import generate_heatmaps_batch
 from models.heads.paf_head import generate_pafs_batch
 from models.heads.class_head import generate_class_maps_batch
