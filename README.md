@@ -135,8 +135,10 @@ The pipeline includes crucial ground-truth supervision corrections:
 │   │   ├── run_fast_overfit_sanity_test_corrected.py # 8-image overfit diagnostic
 │   │   ├── evaluate_decoders_on_validation.py # Full validation benchmark
 │   │   └── benchmark_val_paf_vs_spatial.py # Comparative validation evaluation
-│   └── train_m1v2_13kp.py                  # Main entry point for 13-KP training
-└── train_13kp_colab.ipynb                  # Colab training notebook (root shortcut)
+│   ├── train_13kp_pipeline.py              # 🔥 High-speed standalone training pipeline (~10s/epoch)
+│   ├── eval_13kp_pipeline.py               # 📊 Standalone evaluation & inference pipeline (OpenPose PAF)
+│   └── train_m1v2_13kp.py                  # Modular training entry point
+└── train_13kp_colab.ipynb                  # 🚀 One-click Colab training notebook
 ```
 
 ---
@@ -160,17 +162,13 @@ python -m unittest shoes_vto/tests/test_paf_heatmap_supervision.py
 python -m unittest shoes_vto/tests/test_paf_assembly.py
 ```
 
-### 2. Run Overfit Sanity Diagnostic
+### 2. Fast Synthetic Dry Run (Verify Training & Inference)
 ```bash
-python shoes_vto/tools/run_fast_overfit_sanity_test_corrected.py
+python shoes_vto/train_13kp_pipeline.py --dry_run
+python shoes_vto/eval_13kp_pipeline.py --dry_run
 ```
 
-### 3. Evaluate Decoders on Full Validation Split
-```bash
-python shoes_vto/tools/benchmark_val_paf_vs_spatial.py
-```
-
-### 4. Fast Retraining on Google Colab
+### 3. Fast Retraining on Google Colab
 Open [`train_13kp_colab.ipynb`](train_13kp_colab.ipynb):
 
 ```bash
@@ -180,8 +178,8 @@ Open [`train_13kp_colab.ipynb`](train_13kp_colab.ipynb):
     --dst /content/shoes_vto_v2/shoes_vto/data/shuffled_v4_1_13kp \
     --symlink
 
-# Step 2: Launch Fast Retraining with Live Every-10-Epoch Visualizations
-!python shoes_vto/train_m1v2_13kp.py \
+# Step 2: Launch High-Speed Training with Live Every-10-Epoch Visualizations
+!python shoes_vto/train_13kp_pipeline.py \
     --dataset_root /content/shoes_vto_v2/shoes_vto/data/shuffled_v4_1_13kp \
     --output_dir shoes_vto/outputs/m1v2_13kp_stage2_paf_fix \
     --epochs 100 \
@@ -190,6 +188,9 @@ Open [`train_13kp_colab.ipynb`](train_13kp_colab.ipynb):
     --num_workers 2 \
     --vis_interval 10
 
-# Step 3: Evaluate Best Checkpoint
-!python shoes_vto/tools/benchmark_val_paf_vs_spatial.py
+# Step 3: Full Validation Benchmark with OpenPose PAF-Led Assembly
+!python shoes_vto/eval_13kp_pipeline.py \
+    --checkpoint shoes_vto/outputs/m1v2_13kp_stage2_paf_fix/checkpoints/best.pth \
+    --valid_dir /content/shoes_vto_v2/shoes_vto/data/shuffled_v4_1_13kp/valid \
+    --output_dir shoes_vto/outputs/validation_eval_shuffled_v4_1
 ```
